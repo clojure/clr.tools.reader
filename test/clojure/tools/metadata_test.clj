@@ -5,9 +5,9 @@
   (:require [clojure.tools.reader.reader-types :as reader-types]
             [clojure.string :as str]
             [clojure.walk :as walk])
-  (:import java.nio.charset.Charset
-           (java.io StringReader)
-           clojure.lang.LineNumberingPushbackReader))
+  (:import                                                                   ;;; java.nio.charset.Charset
+           (System.IO StringReader)                                          ;;; java.io
+           clojure.lang.LineNumberingTextReader))                            ;;; LineNumberingPushbackReader
 
 (defn compare-forms-with-meta [expected-form actual-form]
   (let [comparisons (map vector (tree-seq coll? identity expected-form)
@@ -58,7 +58,7 @@
 
 (deftest read-metadata
   (let [reader (-> (test-reader)
-                   (LineNumberingPushbackReader.)
+                   (LineNumberingTextReader.)                                                          ;;; LineNumberingPushbackReader.
                    (reader-types/indexing-push-back-reader 1 "haiku.clj"))
         first-form (read reader)
         second-form (read reader)]
@@ -103,7 +103,7 @@
 
 (deftest read-metadata-with-source
   (let [reader (-> (test-reader)
-                   (LineNumberingPushbackReader.)
+                   (LineNumberingTextReader.)                                                          ;;; LineNumberingPushbackReader.
                    (reader-types/source-logging-push-back-reader 1 "haiku.clj"))
         first-form (read reader)
         second-form (read reader)]
@@ -153,7 +153,7 @@
 
 (deftest read-metadata2
   (let [reader (-> (StringReader. test2-contents)
-                   (LineNumberingPushbackReader.)
+                   (LineNumberingTextReader.)                                                          ;;; LineNumberingPushbackReader.
                    (reader-types/indexing-push-back-reader 1 "vector.clj"))
         first-form (read reader)]
     (compare-forms-with-meta expected-vector first-form)))

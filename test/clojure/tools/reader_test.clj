@@ -64,9 +64,9 @@
   ;;        (read-string "#uuid \"550e8400-e29b-41d4-a716-446655440000\"")))
   ;; (is (= #uuid "550e8400-e29b-41d4-a716-446655440000"
   ;;        (read-string "#uuid\"550e8400-e29b-41d4-a716-446655440000\"")))
-  (is (= (java.util.UUID/fromString "550e8400-e29b-41d4-a716-446655440000")
+  (is (= (System.Guid. "550e8400-e29b-41d4-a716-446655440000")                               ;;; java.util.UUID/fromString
          (read-string "#uuid \"550e8400-e29b-41d4-a716-446655440000\"")))
-  (is (= (java.util.UUID/fromString "550e8400-e29b-41d4-a716-446655440000")
+  (is (= (System.Guid. "550e8400-e29b-41d4-a716-446655440000")                               ;;; java.util.UUID/fromString
                   (read-string "#uuid\"550e8400-e29b-41d4-a716-446655440000\"")))
   (when *default-data-reader-fn*
     (let [my-unknown (fn [tag val] {:unknown-tag tag :value val})]
@@ -125,7 +125,7 @@
          [1 2 3] "#?(:cljs #js [1 2 3] :clj [1 2 3])" opts
          :clojure "#?(:foo #some.nonexistent.Record {:x 1} :clj :clojure)" opts)
 
-    (are [re s opts] (is (thrown-with-msg? RuntimeException re (read-string opts s)))
+    (are [re s opts] (is (thrown-with-msg? Exception re (read-string opts s)))                     ;;; RuntimeException
          #"Feature should be a keyword" "#?((+ 1 2) :a)" opts
          #"even number of forms" "#?(:cljs :a :clj)" opts
          #"read-cond-splicing must implement" "(#?@(:clj :a))" opts
@@ -153,7 +153,7 @@
     (is (:splicing? x))
     (is (= :foo (get x :no-such-key :foo)))
     (is (= (:form x) '(:clj [foo]))))
-  (is (thrown-with-msg? RuntimeException #"No reader function for tag"
+  (is (thrown-with-msg? Exception #"No reader function for tag"                          ;;; RuntimeException
                         (read-string {:read-cond :preserve} "#js {:x 1 :y 2}" )))
   (let [x (read-string {:read-cond :preserve} "#?(:cljs #js {:x 1 :y 2})")
         [platform tl] (:form x)]

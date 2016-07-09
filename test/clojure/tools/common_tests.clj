@@ -19,19 +19,19 @@
   (is (== +0x42e (read-string "+0x42e")))
   (is (== -0x42e (read-string "-0x42e")))
 
-  (is (instance? Long (read-string "2147483647")))
-  (is (instance? Long (read-string "+1")))
-  (is (instance? Long (read-string "1")))
-  (is (instance? Long (read-string "+0")))
-  (is (instance? Long (read-string "0")))
-  (is (instance? Long (read-string "-0")))
-  (is (instance? Long (read-string "-1")))
-  (is (instance? Long (read-string "-2147483648")))
+  (is (instance? Int64 (read-string "2147483647")))          ;;; Long
+  (is (instance? Int64 (read-string "+1")))                  ;;; Long
+  (is (instance? Int64 (read-string "1")))                   ;;; Long
+  (is (instance? Int64 (read-string "+0")))                  ;;; Long
+  (is (instance? Int64 (read-string "0")))                   ;;; Long
+  (is (instance? Int64 (read-string "-0")))                  ;;; Long
+  (is (instance? Int64 (read-string "-1")))                  ;;; Long
+  (is (instance? Int64 (read-string "-2147483648")))         ;;; Long
 
-  (is (instance? Long (read-string "2147483648")))
-  (is (instance? Long (read-string "-2147483649")))
-  (is (instance? Long (read-string "9223372036854775807")))
-  (is (instance? Long (read-string "-9223372036854775808")))
+  (is (instance? Int64 (read-string "2147483648")))                         ;;; Long
+  (is (instance? Int64 (read-string "-2147483649")))                        ;;; Long
+  (is (instance? Int64 (read-string "9223372036854775807")))                ;;; Long
+  (is (instance? Int64 (read-string "-9223372036854775808")))               ;;; Long
 
   (is (instance? BigInt (read-string "9223372036854775808")))
   (is (instance? BigInt (read-string "-9223372036854775809")))
@@ -191,9 +191,9 @@
   (is (instance? clojure.lang.Symbol (read-string "alphabet")))
   (is (= "foo//" (str (read-string "foo//")))) ;; the clojure reader can't read this
   (is (= (str 'NaN) (str (read-string "NaN")))) ;; the clojure reader can't read this
-  (is (= Double/POSITIVE_INFINITY (read-string "Infinity"))) ;; the clojure reader can't read this
-  (is (= Double/POSITIVE_INFINITY (read-string "+Infinity"))) ;; the clojure reader can't read this
-  (is (= Double/NEGATIVE_INFINITY (read-string "-Infinity")))) ;; the clojure reader can't read this
+  (is (= Double/PositiveInfinity (read-string "Infinity"))) ;; the clojure reader can't read this            POSITIVE_INFINITY
+  (is (= Double/PositiveInfinity (read-string "+Infinity"))) ;; the clojure reader can't read this           POSITIVE_INFINITY
+  (is (= Double/NegativeInfinity (read-string "-Infinity")))) ;; the clojure reader can't read this          NEGATIVE_INFINITY
 
 (deftest read-specials
   (is (= 'nil nil))
