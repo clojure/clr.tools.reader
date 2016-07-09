@@ -57,7 +57,7 @@
           (str sb)
           (if (not-constituent? ch)
             (reader-error rdr "Invalid constituent character: " ch)
-            (recur (doto sb (.append (read-char rdr))) (peek-char rdr))))))))
+            (recur (doto sb (.Append (read-char rdr))) (peek-char rdr))))))))                    ;;; .append
 
 (declare read-tagged)
 
@@ -83,34 +83,34 @@
   ([^String token ^long offset ^long length ^long base]
    (let [l (+ offset length)]
      (when-not (== (count token) l)
-       (throw (IllegalArgumentException. (str "Invalid unicode character: \\" token))))
+       (throw (ArgumentException. (str "Invalid unicode character: \\" token))))                ;;; IllegalArgumentException.
      (loop [i offset uc 0]
        (if (== i l)
          (char uc)
-         (let [d (Character/digit (int (nth token i)) (int base))]
+         (let [d (clojure.lang.LispReader/CharValueInRadix (int (nth token i)) (int base))]     ;;; Character/digit
            (if (== d -1)
-             (throw (IllegalArgumentException. (str "Invalid digit: " (nth token i))))
+             (throw (ArgumentException. (str "Invalid digit: " (nth token i))))                 ;;; IllegalArgumentException.
              (recur (inc i) (long (+ d (* uc base))))))))))
 
   ([rdr initch base length exact?]
    (let [length (long length)
          base (long base)]
-     (loop [i 1 uc (Character/digit (int initch) (int base))]
+     (loop [i 1 uc (clojure.lang.LispReader/CharValueInRadix (int initch) (int base))]          ;;; Character/digit
        (if (== uc -1)
-         (throw (IllegalArgumentException. (str "Invalid digit: " initch)))
+         (throw (ArgumentException. (str "Invalid digit: " initch)))                            ;;; IllegalArgumentException.
          (if-not (== i length)
            (let [ch (peek-char rdr)]
              (if (or (whitespace? ch)
                      (macros ch)
                      (nil? ch))
                (if exact?
-                 (throw (IllegalArgumentException.
+                 (throw (ArgumentException.                                                     ;;; IllegalArgumentException.
                          (str "Invalid character length: " i ", should be: " length)))
                  (char uc))
-               (let [d (Character/digit (int ch) (int base))]
+               (let [d (clojure.lang.LispReader/CharValueInRadix (int ch) (int base))]          ;;; Character/digit
                  (read-char rdr)
                  (if (== d -1)
-                   (throw (IllegalArgumentException. (str "Invalid digit: " ch)))
+                   (throw (ArgumentException. (str "Invalid digit: " ch)))                      ;;; IllegalArgumentException.
                    (recur (inc i) (long (+ d (* uc base))))))))
            (char uc)))))))
 
@@ -129,7 +129,7 @@
             token-len (count token)]
         (cond
 
-         (== 1 token-len)  (Character/valueOf (nth token 0))
+         (== 1 token-len)  (char (nth token 0))                                                   ;;; Character/valueOf
 
          (= token "newline") \newline
          (= token "space") \space
@@ -138,15 +138,15 @@
          (= token "formfeed") \formfeed
          (= token "return") \return
 
-         (.startsWith token "u")
+         (.StartsWith token "u")                                                                   ;;; .startsWith
          (let [c (read-unicode-char token 1 4 16)
                ic (int c)]
            (if (and (> ic upper-limit)
                     (< ic lower-limit))
-             (reader-error rdr "Invalid character constant: \\u" (Integer/toString ic 16))
+             (reader-error rdr "Invalid character constant: \\u" (.ToString ic "x"))              ;;; (Integer/toString ic 16)
              c))
 
-         (.startsWith token "o")
+         (.StartsWith token "o")                                                                  ;;; .startsWith
          (let [len (dec token-len)]
            (if (> len 3)
              (reader-error rdr "Invalid octal escape sequence length: " len)
@@ -192,19 +192,20 @@
   [rdr _ opts]
   (let [l (to-array (read-delimited \} rdr opts))]
     (when (== 1 (bit-and (alength l) 1))
+    (when (== 1 (bit-and (alength l) 1))
       (reader-error rdr "Map literal must contain an even number of forms"))
-    (RT/map l)))
+    (RT/map l))))
 
 (defn- read-number
   [reader initch opts]
-  (loop [sb (doto (StringBuilder.) (.append initch))
+  (loop [sb (doto (StringBuilder.) (.Append initch))                             ;;; .append
          ch (read-char reader)]
     (if (or (whitespace? ch) (macros ch) (nil? ch))
       (let [s (str sb)]
         (unread reader ch)
         (or (match-number s)
             (reader-error reader "Invalid number format [" s "]")))
-      (recur (doto sb (.append ch)) (read-char reader)))))
+      (recur (doto sb (.Append ch)) (read-char reader)))))                        ;;; .append
 
 (defn- escape-char [sb rdr]
   (let [ch (read-char rdr)]
@@ -217,7 +218,7 @@
       \b "\b"
       \f "\f"
       \u (let [ch (read-char rdr)]
-           (if (== -1 (Character/digit (int ch) 16))
+           (if (== -1 (clojure.lang.LispReader/CharValueInRadix (int ch) 16))       ;;; Character/digit
              (reader-error rdr "Invalid unicode escape: \\u" ch)
              (read-unicode-char rdr ch 16 4 true)))
       (if (numeric? ch)
@@ -233,10 +234,10 @@
          ch (read-char reader)]
     (case ch
       nil (reader-error reader "EOF while reading string")
-      \\ (recur (doto sb (.append (escape-char sb reader)))
+      \\ (recur (doto sb (.Append (escape-char sb reader)))                           ;;; .append
                 (read-char reader))
       \" (str sb)
-      (recur (doto sb (.append ch)) (read-char reader)))))
+      (recur (doto sb (.Append ch)) (read-char reader)))))                            ;;; .append
 
 (defn- read-symbol
   [rdr initch]
@@ -249,8 +250,8 @@
       "false" false
       "/" '/
       "NaN" Double/NaN
-      "-Infinity" Double/NEGATIVE_INFINITY
-      ("Infinity" "+Infinity") Double/POSITIVE_INFINITY
+      "-Infinity" Double/NegativeInfinity                                              ;;; NEGATIVE_INFINITY
+      ("Infinity" "+Infinity") Double/PositiveInfinity                                 ;;; POSITIVE_INFINITY
 
       (or (when-let [p (parse-symbol token)]
             (symbol (p 0) (p 1)))
@@ -262,7 +263,7 @@
     (if-not (whitespace? ch)
       (let [token (read-token reader ch)
             s (parse-symbol token)]
-        (if (and s (== -1 (.indexOf token "::")))
+        (if (and s (== -1 (.IndexOf token "::")))                                          ;;; .indexOf
           (let [^String ns (s 0)
                 ^String name (s 1)]
             (if (identical? \: (nth token 0))
@@ -394,7 +395,7 @@
            (let [d (ex-data e)]
              (if (= :reader-exception (:type d))
                (throw e)
-               (throw (ex-info (.getMessage e)
+               (throw (ex-info (.Message e)                                           ;;; .getMessage
                                (merge {:type :reader-exception}
                                       d
                                       (if (indexing-reader? reader)
@@ -402,7 +403,7 @@
                                          :column (get-column-number reader)
                                          :file   (get-file-name reader)}))
                                e))))
-           (throw (ex-info (.getMessage e)
+           (throw (ex-info (.Message e)                                               ;;; .getMessage
                            (merge {:type :reader-exception}
                                   (if (indexing-reader? reader)
                                     {:line   (get-line-number reader)
