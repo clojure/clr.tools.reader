@@ -9,17 +9,19 @@
 ;;; copied from clojure.instant and clojure.uuid ;;;
 
 (ns ^:skip-wiki clojure.tools.reader.default-data-readers
-  (:import [java.util Calendar Date GregorianCalendar TimeZone]
-           [java.sql Timestamp]))
+  ;;;(:import  [java.util Calendar Date GregorianCalendar TimeZone]        ;;; Do we want to do 
+ );;;          [java.sql Timestamp]))                                      ;;; Do we want to do [System.DataSqlTypes SqlDateTime]
 
 ;;; clojure.instant ;;;
+
+(set! *warn-on-reflection* true)
 
 ;;; ------------------------------------------------------------------------
 ;;; convenience macros
 
 (defmacro ^:private fail
   [msg]
-  `(throw (Exception. ~msg)))                                                     ;;; RuntimeException.
+  `(throw (Exception. ~msg)))                                            ;;; RuntimeException.
 
 (defmacro ^:private verify
   ([test msg] `(when-not ~test (fail ~msg)))
@@ -42,11 +44,11 @@
 
 (defn- zero-fill-right [^String s width]
   (cond (= width (count s)) s
-        (< width (count s)) (.Substring s 0 width)                                              ;;; .substring
+        (< width (count s)) (.Substring s 0 width)              ;;; .substring
         :else (loop [b (StringBuilder. s)]
-                (if (< (.Length b) width)                                                       ;;; .length
-                  (recur (.Append b \0))                                                        ;;; .append
-                  (.toString b)))))                                                             ;;; .toString
+                (if (< (.Length b) width)                       ;;; .length
+                  (recur (.Append b \0))                        ;;; .append
+                  (.ToString b)))))                             ;;; .toString
 
 (def parse-timestamp
      "Parse a string containing an RFC3339-like like timestamp.
@@ -101,7 +103,7 @@ specified.
 "
      (let [timestamp #"(\d\d\d\d)(?:-(\d\d)(?:-(\d\d)(?:[T](\d\d)(?::(\d\d)(?::(\d\d)(?:[.](\d+))?)?)?)?)?)?(?:[Z]|([-+])(\d\d):(\d\d))?"]
 
-       (fn [new-instant ^CharSequence cs]
+       (fn [new-instant ^String cs]                                           ;;; ^CharSequence
          (if-let [[_ years months days hours minutes seconds fraction
                    offset-sign offset-hours offset-minutes]
                   (re-matches timestamp cs)]
@@ -160,144 +162,187 @@ with invalid arguments."
 ;;; ------------------------------------------------------------------------
 ;;; print integration
 
-(def ^:private ^ThreadLocal thread-local-utc-date-format
-  ;; SimpleDateFormat is not thread-safe, so we use a ThreadLocal proxy for access.
-  ;; http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4228335
-  (proxy [ThreadLocal] []
-    (initialValue []
-      (doto (java.text.SimpleDateFormat. "yyyy-MM-dd'T'HH:mm:ss.SSS-00:00")
-        ;; RFC3339 says to use -00:00 when the timezone is unknown (+00:00 implies a known GMT)
-        (.setTimeZone (java.util.TimeZone/getTimeZone "GMT"))))))
+;;;(def ^:private ^ThreadLocal thread-local-utc-date-format
+;;;  ;; SimpleDateFormat is not thread-safe, so we use a ThreadLocal proxy for access.
+;;;  ;; http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4228335
+;;;  (proxy [ThreadLocal] []
+;;;    (initialValue []
+;;;      (doto (java.text.SimpleDateFormat. "yyyy-MM-dd'T'HH:mm:ss.SSS-00:00")
+;;;        ;; RFC3339 says to use -00:00 when the timezone is unknown (+00:00 implies a known GMT)
+;;;        (.setTimeZone (java.util.TimeZone/getTimeZone "GMT"))))))
 
-(defn- print-date
-  "Print a java.util.Date as RFC3339 timestamp, always in UTC."
-  [^java.util.Date d, ^java.io.Writer w]
-  (let [utc-format (.get thread-local-utc-date-format)]
-    (.write w "#inst \"")
-    (.write w ^String (.format ^java.text.SimpleDateFormat utc-format d))
-    (.write w "\"")))
+(defn- print-datetime                                                              ;;; print-date
+  "Print a System.DateTime as RFC3339 timestamp, always in UTC."                   ;;; java.util.Date
+  [ ^System.DateTime d, ^System.IO.TextWriter w]                                   ;;; ^java.util.Date  ^java.io.Writer
+  (let [utc-format "yyyy-MM-ddTHH:mm:ss.fff-00:00"]                                ;;; ^java.text.DateFormat utc-format (.get thread-local-utc-date-format)
+    (.Write w "#inst \"")                                                          ;;; .write  
+    (.Write w (.ToString d utc-format ))                                           ;;; (.write w (.format utc-format d))
+    (.Write w "\"")))                                                              ;;; .write
 
-(defmethod print-method java.util.Date
-  [^java.util.Date d, ^java.io.Writer w]
-  (print-date d w))
+;;; DM Added
+(defn- print-datetimeoffset
+  "Print a System.DateTimeOffset as RFC3339 timestamp, always in UTC."
+  [ ^System.DateTimeOffset d, ^System.IO.TextWriter w]
+  (let [utc-format "yyyy-MM-ddTHH:mm:ss.fffzzzz"]
+    (.Write w "#inst \"")
+    (.Write w (.ToString d utc-format ))
+    (.Write w "\"")))
+;;; 
 
-(defmethod print-dup java.util.Date
-  [^java.util.Date d, ^java.io.Writer w]
-  (print-date d w))
+(defmethod print-method System.DateTime                                   ;;; java.util.Date
+  [^System.DateTime d, ^System.IO.TextWriter w]                           ;;; ^java.util.Date ^java.io.Writer
+  (print-datetime d w))                                                   ;;; print-date
 
-(defn- print-calendar
-  "Print a java.util.Calendar as RFC3339 timestamp, preserving timezone."
-  [^java.util.Calendar c, ^java.io.Writer w]
-  (let [calstr (format "%1$tFT%1$tT.%1$tL%1$tz" c)
-        offset-minutes (- (.length calstr) 2)]
-    ;; calstr is almost right, but is missing the colon in the offset
-    (.write w "#inst \"")
-    (.write w calstr 0 offset-minutes)
-    (.write w ":")
-    (.write w calstr offset-minutes 2)
-    (.write w "\"")))
+(defmethod print-dup System.DateTime                                      ;;; java.util.Date
+  [^System.DateTime d, ^System.IO.TextWriter w]                           ;;; ^java.util.Date ^java.io.Writer
+  (print-datetime d w))                                                   ;;; print-date
 
-(defmethod print-method java.util.Calendar
-  [^java.util.Calendar c, ^java.io.Writer w]
-  (print-calendar c w))
+;;;(defn- print-calendar
+;;;  "Print a java.util.Calendar as RFC3339 timestamp, preserving timezone."
+;;;  [^java.util.Calendar c, ^java.io.Writer w]
+;;;  (let [calstr (format "%1$tFT%1$tT.%1$tL%1$tz" c)
+;;;        offset-minutes (- (.length calstr) 2)]
+;;;    ;; calstr is almost right, but is missing the colon in the offset
+;;;    (.write w "#inst \"")
+;;;    (.write w calstr 0 offset-minutes)
+;;;    (.write w ":")
+;;;    (.write w calstr offset-minutes 2)
+;;;    (.write w "\"")))
 
-(defmethod print-dup java.util.Calendar
-  [^java.util.Calendar c, ^java.io.Writer w]
-  (print-calendar c w))
+(defmethod print-method System.DateTimeOffset                             ;;; java.util.Calendar
+  [^System.DateTimeOffset d, ^System.IO.TextWriter w]                     ;;; ^java.util.Calendar ^java.io.Writer
+  (print-datetimeoffset d w))                                             ;;; print-date
 
+(defmethod print-dup System.DateTimeOffset                                ;;; java.util.Calendar
+  [^System.DateTimeOffset d, ^System.IO.TextWriter w]                     ;;; ^java.util.Calendar ^java.io.Writer
+  (print-datetimeoffset d w))                                             ;;; print-date
 
-(def ^:private ^ThreadLocal thread-local-utc-timestamp-format
-  ;; SimpleDateFormat is not thread-safe, so we use a ThreadLocal proxy for access.
-  ;; http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4228335
-  (proxy [ThreadLocal] []
-    (initialValue []
-      (doto (java.text.SimpleDateFormat. "yyyy-MM-dd'T'HH:mm:ss")
-        (.setTimeZone (java.util.TimeZone/getTimeZone "GMT"))))))
+;;;(def ^:private ^ThreadLocal thread-local-utc-timestamp-format
+;;;  ;; SimpleDateFormat is not thread-safe, so we use a ThreadLocal proxy for access.
+;;;  ;; http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4228335
+;;;  (proxy [ThreadLocal] []
+;;;    (initialValue []
+;;;      (doto (java.text.SimpleDateFormat. "yyyy-MM-dd'T'HH:mm:ss")
+;;;        (.setTimeZone (java.util.TimeZone/getTimeZone "GMT"))))))
 
-(defn- print-timestamp
-  "Print a java.sql.Timestamp as RFC3339 timestamp, always in UTC."
-  [^java.sql.Timestamp ts, ^java.io.Writer w]
-  (let [utc-format (.get thread-local-utc-timestamp-format)]
-    (.write w "#inst \"")
-    (.write w ^String (.format ^java.text.SimpleDateFormat utc-format ts))
-    ;; add on nanos and offset
-    ;; RFC3339 says to use -00:00 when the timezone is unknown (+00:00 implies a known GMT)
-    (.write w (format ".%09d-00:00" (.getNanos ts)))
-    (.write w "\"")))
+;;;(defn- print-timestamp
+;;;  "Print a java.sql.Timestamp as RFC3339 timestamp, always in UTC."
+;;;  [^java.sql.Timestamp ts, ^java.io.Writer w]
+;;;  (let [^java.text.DateFormat utc-format (.get thread-local-utc-timestamp-format)]
+;;;    (.write w "#inst \"")
+;;;    (.write w (.format utc-format ts))
+;;;    ;; add on nanos and offset
+;;;    ;; RFC3339 says to use -00:00 when the timezone is unknown (+00:00 implies a known GMT)
+;;;    (.write w (format ".%09d-00:00" (.getNanos ts)))
+;;;    (.write w "\"")))
 
-(defmethod print-method java.sql.Timestamp
-  [^java.sql.Timestamp ts, ^java.io.Writer w]
-  (print-timestamp ts w))
+;;;(defmethod print-method java.sql.Timestamp
+;;;  [^java.sql.Timestamp ts, ^java.io.Writer w]
+;;;  (print-timestamp ts w))
 
-(defmethod print-dup java.sql.Timestamp
-  [^java.sql.Timestamp ts, ^java.io.Writer w]
-  (print-timestamp ts w))
+;;;(defmethod print-dup java.sql.Timestamp
+;;;  [^java.sql.Timestamp ts, ^java.io.Writer w]
+;;;  (print-timestamp ts w))
 
 
 ;;; ------------------------------------------------------------------------
 ;;; reader integration
 
-(defn- construct-calendar
-  "Construct a java.util.Calendar, preserving the timezone
-offset, but truncating the subsecond fraction to milliseconds."
-  ^GregorianCalendar
+;;;(defn- construct-calendar
+;;;  "Construct a java.util.Calendar, preserving the timezone
+;;;offset, but truncating the subsecond fraction to milliseconds."
+;;;  ^GregorianCalendar
+;;;  [years months days hours minutes seconds nanoseconds
+;;;   offset-sign offset-hours offset-minutes]
+;;;  (doto (GregorianCalendar. years (dec months) days hours minutes seconds)
+;;;    (.set Calendar/MILLISECOND (/ nanoseconds 1000000))
+;;;    (.setTimeZone (TimeZone/getTimeZone
+;;;                   (format "GMT%s%02d:%02d"
+;;;                           (if (neg? offset-sign) "-" "+")
+;;;                           offset-hours offset-minutes)))))
+
+;;; DM: Added
+(defn- construct-datetimeoffset
+  "Construct a System.DateTimeOffset, preserving the timezone offset
+but truncating the subsecond fraction to milliseconds."
+  ^DateTimeOffset
   [years months days hours minutes seconds nanoseconds
    offset-sign offset-hours offset-minutes]
-  (doto (GregorianCalendar. years (dec months) days hours minutes seconds)
-    (.set Calendar/MILLISECOND (quot nanoseconds 1000000))
-    (.setTimeZone (TimeZone/getTimeZone
-                   (format "GMT%s%02d:%02d"
-                           (if (neg? offset-sign) "-" "+")
-                           offset-hours offset-minutes)))))
+  (DateTimeOffset. years months days hours minutes seconds 
+     (/ nanoseconds 1000000) 
+     (if (neg? offset-sign) 
+	   (TimeSpan. (- offset-hours) (- offset-minutes) 0)
+	   (TimeSpan. offset-hours offset-minutes 0))))
+;;;
 
-(defn- construct-date
-  "Construct a java.util.Date, which expresses the original instant as
+
+;;;(defn- construct-date
+;;;  "Construct a java.util.Date, which expresses the original instant as
+;;;milliseconds since the epoch, UTC."
+;;;  [years months days hours minutes seconds nanoseconds
+;;;   offset-sign offset-hours offset-minutes]
+;;;  (.getTime (construct-calendar years months days
+;;;                                hours minutes seconds nanoseconds
+;;;                                offset-sign offset-hours offset-minutes)))
+
+;;; DM: Added
+(defn- construct-datetime
+  "Construct a System.DateTime, which expresses the original instant as
 milliseconds since the epoch, UTC."
   [years months days hours minutes seconds nanoseconds
    offset-sign offset-hours offset-minutes]
-  (.getTime (construct-calendar years months days
+   (.UtcDateTime (construct-datetimeoffset years months days
                                 hours minutes seconds nanoseconds
                                 offset-sign offset-hours offset-minutes)))
+;;;
 
-(defn- construct-timestamp
-  "Construct a java.sql.Timestamp, which has nanosecond precision."
-  [years months days hours minutes seconds nanoseconds
-   offset-sign offset-hours offset-minutes]
-  (doto (Timestamp.
-         (.getTimeInMillis
-          (construct-calendar years months days
-                              hours minutes seconds 0
-                              offset-sign offset-hours offset-minutes)))
-    ;; nanos must be set separately, pass 0 above for the base calendar
-    (.setNanos nanoseconds)))
 
-(def read-instant-date
-  "To read an instant as a java.util.Date, bind *data-readers* to a map with
+;;;(defn- construct-timestamp
+;;;  "Construct a java.sql.Timestamp, which has nanosecond precision."
+;;;  [years months days hours minutes seconds nanoseconds
+;;;   offset-sign offset-hours offset-minutes]
+;;;  (doto (Timestamp.
+;;;         (.getTimeInMillis
+;;;          (construct-calendar years months days
+;;;                              hours minutes seconds nanoseconds
+;;;                              offset-sign offset-hours offset-minutes)))
+;;;    (.setNanos nanoseconds)))
+
+(def read-instant-datetime                                                                          ;;; read-instant-date
+  "To read an instant as a System.DateTime, bind *data-readers* to a map with 
 this var as the value for the 'inst key. The timezone offset will be used
 to convert into UTC."
-  (partial parse-timestamp (validated construct-date)))
+   (partial parse-timestamp (validated construct-datetime)))                                      ;;; construct-date
 
-(def read-instant-calendar
-  "To read an instant as a java.util.Calendar, bind *data-readers* to a map with
-this var as the value for the 'inst key.  Calendar preserves the timezone
-offset."
-  (partial parse-timestamp (validated construct-calendar)))
+;;; DM: Added
+(def read-instant-datetimeoffset
+  "To read an instant as a System.DateTimeOffset, bind *data-readers* to a map with 
+this var as the value for the 'inst key. The timezone offset will be used
+to convert into UTC."    
+   (partial parse-timestamp (validated construct-datetimeoffset)))
+;;;
 
-(def read-instant-timestamp
-  "To read an instant as a java.sql.Timestamp, bind *data-readers* to a
-map with this var as the value for the 'inst key. Timestamp preserves
-fractional seconds with nanosecond precision. The timezone offset will
-be used to convert into UTC."
-  (partial parse-timestamp (validated construct-timestamp)))
+;;;(def read-instant-calendar
+;;;  "To read an instant as a java.util.Calendar, bind *data-readers* to a map with
+;;;this var as the value for the 'inst key.  Calendar preserves the timezone
+;;;offset."
+;;;  (partial parse-timestamp (validated construct-calendar)))
+
+;;;(def read-instant-timestamp
+;;;  "To read an instant as a java.sql.Timestamp, bind *data-readers* to a
+;;;map with this var as the value for the 'inst key. Timestamp preserves
+;;;fractional seconds with nanosecond precision. The timezone offset will
+;;;be used to convert into UTC."
+;;;  (partial parse-timestamp (validated construct-timestamp)))
 
 ;;; clojure.uuid ;;;
 
-(defn default-uuid-reader [form]
+(defn- default-uuid-reader [form]
   {:pre [(string? form)]}
-  (java.util.UUID/fromString form))
+  (System.Guid. ^String form))                                        ;;; (java.util.UUID/fromString form), added String tag
 
-(defmethod print-method java.util.UUID [uuid ^java.io.Writer w]
-  (.write w (str "#uuid \"" (str uuid) "\"")))
+(defmethod print-method System.Guid [uuid ^System.IO.TextWriter w]    ;;; java.util.UUID ^java.io.Writer
+  (.Write w (str "#uuid \"" (str uuid) "\"")))                        ;;; .write
 
-(defmethod print-dup java.util.UUID [o w]
+(defmethod print-dup System.Guid [o w]                                ;;; java.util.UUID
   (print-method o w))
