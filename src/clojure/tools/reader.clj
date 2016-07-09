@@ -22,8 +22,8 @@
   (:import (clojure.lang PersistentHashSet IMeta
                          RT Symbol Reflector Var IObj
                          PersistentVector IRecord Namespace)
-           java.lang.reflect.Constructor
-           (java.util regex.Pattern List LinkedList)))
+                                                                                     ;;; java.lang.reflect.Constructor
+           (System.Text.RegularExpressions Regex)))                                   ;;; (java.util regex.Pattern List LinkedList)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; helpers
@@ -59,7 +59,7 @@
         (do (when ch
               (unread rdr ch))
             (str sb))
-        (recur (.append sb ch) (read-char rdr))))))
+        (recur (.Append sb ch) (read-char rdr))))))                         ;;; .append
 
 (declare read-tagged)
 
@@ -84,50 +84,50 @@
   (let [sb (StringBuilder.)]
     (loop [ch (read-char rdr)]
       (if (identical? \" ch)
-        (Pattern/compile (str sb))
+        (Regex. (str sb))                                                                 ;;; Pattern/compile
         (if (nil? ch)
           (reader-error rdr "EOF while reading regex")
           (do
-            (.append sb ch )
+            (.Append sb ch )                                                               ;;; .append
             (when (identical? \\ ch)
               (let [ch (read-char rdr)]
                 (if (nil? ch)
                   (reader-error rdr "EOF while reading regex"))
-                (.append sb ch)))
+                (.Append sb ch)))                                                          ;;; .append
             (recur (read-char rdr))))))))
 
 (defn- read-unicode-char
   ([^String token ^long offset ^long length ^long base]
    (let [l (+ offset length)]
      (when-not (== (count token) l)
-       (throw (IllegalArgumentException. (str "Invalid unicode character: \\" token))))
+       (throw (ArgumentException. (str "Invalid unicode character: \\" token))))                  ;;; IllegalArgumentException
      (loop [i offset uc 0]
        (if (== i l)
          (char uc)
-         (let [d (Character/digit (int (nth token i)) (int base))]
+         (let [d (clojure.lang.LispReader/CharValueInRadix (int (nth token i)) (int base))]       ;;; Character/digit
            (if (== d -1)
-             (throw (IllegalArgumentException. (str "Invalid digit: " (nth token i))))
+             (throw (ArgumentException. (str "Invalid digit: " (nth token i))))                   ;;; IllegalArgumentException
              (recur (inc i) (long (+ d (* uc base))))))))))
 
   ([rdr initch base length exact?]
    (let [base (long base)
          length (long length)]
-     (loop [i 1 uc (long (Character/digit (int initch) (int base)))]
+     (loop [i 1 uc (long (clojure.lang.LispReader/CharValueInRadix (int initch) (int base)))]     ;;; Character/digit
        (if (== uc -1)
-         (throw (IllegalArgumentException. (str "Invalid digit: " initch)))
+         (throw (ArgumentException. (str "Invalid digit: " initch)))                              ;;; IllegalArgumentException
          (if-not (== i length)
            (let [ch (peek-char rdr)]
              (if (or (whitespace? ch)
                      (macros ch)
                      (nil? ch))
                (if exact?
-                 (throw (IllegalArgumentException.
+                 (throw (ArgumentException.                                                       ;;; IllegalArgumentException
                          (str "Invalid character length: " i ", should be: " length)))
                  (char uc))
-               (let [d (Character/digit (int ch) (int base))]
+               (let [d (clojure.lang.LispReader/CharValueInRadix (int ch) (int base))]            ;;; Character/digit
                  (read-char rdr)
                  (if (== d -1)
-                   (throw (IllegalArgumentException. (str "Invalid digit: " ch)))
+                   (throw (ArgumentException. (str "Invalid digit: " ch)))                        ;;; IllegalArgumentException
                    (recur (inc i) (long (+ d (* uc base))))))))
            (char uc)))))))
 
@@ -146,7 +146,7 @@
             token-len (count token)]
         (cond
 
-         (== 1 token-len)  (Character/valueOf (nth token 0))
+         (== 1 token-len)  (char (nth token 0))                                                    ;;; Character/valueOf 
 
          (= token "newline") \newline
          (= token "space") \space
@@ -155,15 +155,15 @@
          (= token "formfeed") \formfeed
          (= token "return") \return
 
-         (.startsWith token "u")
+         (.StartsWith token "u")                                                                   ;;; .startsWith
          (let [c (read-unicode-char token 1 4 16)
                ic (int c)]
            (if (and (> ic upper-limit)
                     (< ic lower-limit))
-             (reader-error rdr "Invalid character constant: \\u" (Integer/toString ic 16))
+             (reader-error rdr "Invalid character constant: \\u" (.ToString ic "x"))               ;;; (Integer/toString ic 16)
              c))
 
-         (.startsWith token "o")
+         (.StartsWith token "o")                                                                    ;;; .startsWith
          (let [len (dec token-len)]
            (if (> len 3)
              (reader-error rdr "Invalid octal escape sequence length: " len)
@@ -261,14 +261,14 @@
 
 (defn- read-number
   [rdr initch]
-  (loop [sb (doto (StringBuilder.) (.append initch))
+  (loop [sb (doto (StringBuilder.) (.Append initch))                                ;;; .append
          ch (read-char rdr)]
     (if (or (whitespace? ch) (macros ch) (nil? ch))
       (let [s (str sb)]
         (unread rdr ch)
         (or (match-number s)
             (reader-error rdr "Invalid number format [" s "]")))
-      (recur (doto sb (.append ch)) (read-char rdr)))))
+      (recur (doto sb (.Append ch)) (read-char rdr)))))                             ;;; .append
 
 (defn- escape-char [sb rdr]
   (let [ch (read-char rdr)]
@@ -281,7 +281,7 @@
       \b "\b"
       \f "\f"
       \u (let [ch (read-char rdr)]
-           (if (== -1 (Character/digit (int ch) 16))
+           (if (== -1 (clojure.lang.LispReader/CharValueInRadix (int ch) 16))       ;;; Character/digit 
              (reader-error rdr "Invalid unicode escape: \\u" ch)
              (read-unicode-char rdr ch 16 4 true)))
       (if (numeric? ch)
@@ -297,10 +297,10 @@
          ch (read-char reader)]
     (case ch
       nil (reader-error reader "EOF while reading string")
-      \\ (recur (doto sb (.append (escape-char sb reader)))
+      \\ (recur (doto sb (.Append (escape-char sb reader)))                           ;;; .append
                 (read-char reader))
       \" (str sb)
-      (recur (doto sb (.append ch)) (read-char reader)))))
+      (recur (doto sb (.Append ch)) (read-char reader)))))                            ;;; .append
 
 (defn- read-symbol
   [rdr initch]
@@ -314,8 +314,8 @@
         "false" false
         "/" '/
         "NaN" Double/NaN
-        "-Infinity" Double/NEGATIVE_INFINITY
-        ("Infinity" "+Infinity") Double/POSITIVE_INFINITY
+        "-Infinity" Double/NegativeInfinity                                            ;;; NEGATIVE_INFINITY
+        ("Infinity" "+Infinity") Double/PositiveInfinity                               ;;; POSITIVE_INFINITY
 
         (or (when-let [p (parse-symbol token)]
               (with-meta (symbol (p 0) (p 1))
@@ -488,9 +488,9 @@
     (if (identical? result READ_FINISHED)
       rdr
       (if splicing
-        (if (instance? List result)
+        (if (instance? |System.Collections.Generic.IList`1[System.Object]| result)                    ;;; List
           (do
-            (.addAll ^List pending-forms 0 ^List result)
+            (doseq [x (seq result)] (.AddLast ^|System.Collections.Generic.LinkedList`1[System.Object]| pending-forms x)) ;;; (.addAll ^List pending-forms 0 ^List result)
             rdr)
           (reader-error rdr "Spliced form list in read-cond-splicing must implement java.util.List."))
         result))))
@@ -498,7 +498,7 @@
 (defn- read-cond
   [rdr _ opts pending-forms]
   (when (not (and opts (#{:allow :preserve} (:read-cond opts))))
-    (throw (RuntimeException. "Conditional read not allowed")))
+    (throw (Exception. "Conditional read not allowed")))                                       ;;; RuntimeException.
   (if-let [ch (read-char rdr)]
     (let [splicing (= ch \@)
           ch (if splicing (read-char rdr) ch)]
@@ -507,7 +507,7 @@
           (reader-error rdr "cond-splice not in list")))
       (if-let [ch (if (whitespace? ch) (read-past whitespace? rdr) ch)]
         (if (not= ch \()
-          (throw (RuntimeException. "read-cond body must be a list"))
+          (throw (Exception. "read-cond body must be a list"))                                 ;;; RuntimeException.
           (binding [*suppress-read* (or *suppress-read* (= :preserve (:read-cond opts)))]
             (if *suppress-read*
               (reader-conditional (read-list rdr ch opts pending-forms) splicing)
@@ -526,7 +526,7 @@
 (defn- read-fn
   [rdr _ opts pending-forms]
   (if (thread-bound? #'arg-env)
-    (throw (IllegalStateException. "Nested #()s are not allowed")))
+    (throw (InvalidOperationException. "Nested #()s are not allowed")))                                    ;;; IllegalStateException
   (binding [arg-env (sorted-map)]
     (let [form (read* (doto rdr (unread \()) true nil opts pending-forms) ;; this sets bindings
           rargs (rseq arg-env)
@@ -553,7 +553,7 @@
       (let [g (garg n)]
         (set! arg-env (assoc arg-env n g))
         g))
-    (throw (IllegalStateException. "Arg literal not in #()")))) ;; should never hit this
+    (throw (InvalidOperationException. "Arg literal not in #()")))) ;; should never hit this               ;;; IllegalStateException
 
 (declare read-symbol)
 
@@ -575,7 +575,7 @@
        :else
        (let [n (read* rdr true nil opts pending-forms)]
          (if-not (integer? n)
-           (throw (IllegalStateException. "Arg literal must be %, %& or %integer"))
+           (throw (InvalidOperationException. "Arg literal must be %, %& or %integer"))                     ;;; IllegalStateException
            (register-arg n)))))))
 
 (defn- read-eval
@@ -630,7 +630,7 @@
 
 (defn- register-gensym [sym]
   (if-not gensym-env
-    (throw (IllegalStateException. "Gensym literal not in syntax-quote")))
+    (throw (InvalidOperationException. "Gensym literal not in syntax-quote")))                          ;;; IllegalStateException
   (or (get gensym-env sym)
       (let [gs (symbol (str (subs (name sym)
                                   0 (dec (count (name sym))))
@@ -641,7 +641,7 @@
 (defn ^:dynamic resolve-symbol
   "Resolve a symbol s into its fully qualified namespace version"
   [s]
-  (if (pos? (.indexOf (name s) "."))
+  (if (pos? (.IndexOf (name s) "."))                                                                     ;;; .indexOf
     s ;; If there is a period, it is interop
     (if-let [ns-str (namespace s)]
       (let [ns (resolve-ns (symbol ns-str))]
@@ -651,7 +651,7 @@
           (symbol (ns-name* ns) (name s))))
       (if-let [o ((ns-map *ns*) s)]
         (if (class? o)
-          (symbol (.getName ^Class o))
+          (symbol (clojure.lang.Util/NameForType o))                                                     ;;; (.getName ^Class o)  -- need NameForType to handle nastiness
           (if (var? o)
             (symbol (-> ^Var o .ns ns-name*) (-> ^Var o .sym name))))
         (symbol (ns-name* *ns*) (name s))))))
@@ -691,23 +691,23 @@
             (let [maybe-class ((ns-map *ns*)
                                (symbol (namespace form)))]
               (if (class? maybe-class)
-                (symbol (.getName ^Class maybe-class) (name form))
+                (symbol (.Name ^Type maybe-class) (name form))               ;;; .getName ^Class
                 (resolve-symbol form)))
             (let [sym (name form)]
               (cond
-               (.endsWith sym "#")
+               (.EndsWith sym "#")                                            ;;; .endsWith
                (register-gensym form)
 
-               (.startsWith sym ".")
+               (.StartsWith sym ".")                                          ;;; .startsWith
                form
 
-               (.endsWith sym ".")
+               (.EndsWith sym ".")                                            ;;; .endsWith
                (let [csym (symbol (subs sym 0 (dec (count sym))))]
-                 (symbol (.concat (name (resolve-symbol csym)) ".")))
+                 (symbol (String/Concat (name (resolve-symbol csym)) ".")))   ;;; .concat
                :else (resolve-symbol form)))))
 
     (unquote? form) (second form)
-    (unquote-splicing? form) (throw (IllegalStateException. "unquote-splice not in list"))
+    (unquote-splicing? form) (throw (InvalidOperationException. "unquote-splice not in list"))                      ;;; IllegalStateException.
 
     (coll? form)
     (cond
@@ -722,7 +722,7 @@
          (syntax-quote-coll nil seq)
          '(clojure.core/list)))
 
-     :else (throw (UnsupportedOperationException. "Unknown Collection type")))
+     :else (throw (InvalidOperationException. "Unknown Collection type")))                  ;;; UnsupportedOperationException.
 
     (or (keyword? form)
         (number? form)
@@ -730,7 +730,7 @@
         (string? form)
         (nil? form)
         (instance? Boolean form)
-        (instance? Pattern form))
+        (instance? Regex form))                                                          ;;; Pattern
     form
 
     :else (list 'quote form))
@@ -805,7 +805,7 @@
 (defn- read-ctor [rdr class-name opts pending-forms]
   (when-not *read-eval*
     (reader-error "Record construction syntax can only be used when *read-eval* == true"))
-  (let [class (Class/forName (name class-name) false (RT/baseLoader))
+  (let [class (RT/classForName (name class-name))                                              ;;; (Class/forName (name class-name) false (RT/baseLoader)
         ch (read-past whitespace? rdr)] ;; differs from clojure
     (if-let [[end-ch form] (case ch
                              \[ [\] :short]
@@ -813,17 +813,17 @@
                              nil)]
       (let [entries (to-array (read-delimited end-ch rdr opts pending-forms))
             numargs (count entries)
-            all-ctors (.getConstructors class)
-            ctors-num (count all-ctors)]
+            all-ctors (.GetConstructors class)
+            ctors-num (count all-ctors)]                                                                 ;;; .getConstructors
         (case form
           :short
           (loop [i 0]
             (if (>= i ctors-num)
               (reader-error rdr "Unexpected number of constructor arguments to " (str class)
                             ": got" numargs)
-              (if (== (count (.getParameterTypes ^Constructor (aget all-ctors i)))
+              (if (== (count (.GetParameters ^System.Reflection.ConstructorInfo (aget all-ctors i)))     ;;; .getParameterTypes   ^Constructor
                       numargs)
-                (Reflector/invokeConstructor class entries)
+                (Reflector/InvokeConstructor class entries)                                              ;;; invokeConstructor
                 (recur (inc i)))))
           :extended
           (let [vals (RT/map entries)]
@@ -832,7 +832,7 @@
                 (if-not (keyword? (first s))
                   (reader-error rdr "Unreadable ctor form: key must be of type clojure.lang.Keyword")
                   (recur (next s)))))
-            (Reflector/invokeStaticMethod class "create" (object-array [vals])))))
+            (Reflector/InvokeStaticMethod class "create" (object-array [vals])))))                       ;;; invokeStaticMethod
       (reader-error rdr "Invalid reader constructor form"))))
 
 (defn- read-tagged [rdr initch opts pending-forms]
@@ -844,7 +844,7 @@
       (if-let [f (or (*data-readers* tag)
                      (default-data-readers tag))]
         (f (read* rdr true nil opts pending-forms))
-        (if (.contains (name tag) ".")
+        (if (.Contains (name tag) ".")                                                                        ;;; .contains 
           (read-ctor rdr tag opts pending-forms)
           (if-let [f *default-data-reader-fn*]
             (f tag (read* rdr true nil opts pending-forms))
@@ -891,7 +891,7 @@
 (def default-data-readers
   "Default map of data reader functions provided by Clojure.
    May be overridden by binding *data-readers*"
-  {'inst #'data-readers/read-instant-date
+  {'inst #'data-readers/read-instant-datetime                                            ;;; read-instant-date
    'uuid #'data-readers/default-uuid-reader})
 
 (defn ^:private read*
@@ -904,7 +904,7 @@
        (loop []
          (log-source reader
            (if (seq pending-forms)
-             (.remove ^List pending-forms 0)
+             (.RemoveFirst ^|System.Collections.Generic.LinkedList`1[System.Object]| pending-forms)      ;;; .remove ^List  0
              (let [ch (read-char reader)]
                (cond
                 (whitespace? ch) (recur)
@@ -923,7 +923,7 @@
            (let [d (ex-data e)]
              (if (= :reader-exception (:type d))
                (throw e)
-               (throw (ex-info (.getMessage e)
+               (throw (ex-info (.Message e)                                        ;;; .getMessage
                                (merge {:type :reader-exception}
                                       d
                                       (if (indexing-reader? reader)
@@ -931,7 +931,7 @@
                                          :column (get-column-number reader)
                                          :file   (get-file-name reader)}))
                                e))))
-           (throw (ex-info (.getMessage e)
+           (throw (ex-info (.Message e)                                            ;;; .getMessage
                            (merge {:type :reader-exception}
                                   (if (indexing-reader? reader)
                                     {:line   (get-line-number reader)
@@ -962,8 +962,8 @@
   {:arglists '([] [reader] [opts reader] [reader eof-error? eof-value])}
   ([] (read *in* true nil))
   ([reader] (read reader true nil))
-  ([{eof :eof :as opts :or {eof :eofthrow}} reader] (read* reader (= eof :eofthrow) eof nil opts (LinkedList.)))
-  ([reader eof-error? sentinel] (read* reader eof-error? sentinel nil {} (LinkedList.))))
+  ([{eof :eof :as opts :or {eof :eofthrow}} reader] (read* reader (= eof :eofthrow) eof nil opts (|System.Collections.Generic.LinkedList`1[System.Object]|.)))       ;;;  LinkedList.
+  ([reader eof-error? sentinel] (read* reader eof-error? sentinel nil {} (|System.Collections.Generic.LinkedList`1[System.Object]|.))))                              ;;; LinkedList.
 
 (defn read-string
   "Reads one object from the string s.
