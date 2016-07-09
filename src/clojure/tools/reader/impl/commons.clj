@@ -10,9 +10,9 @@
   (:refer-clojure :exclude [char])
   (:require [clojure.tools.reader.reader-types :refer [peek-char read-char reader-error]]
             [clojure.tools.reader.impl.utils :refer [numeric? newline? char]])
-  (:import (clojure.lang BigInt Numbers)
-           (java.util.regex Pattern Matcher)
-           java.lang.reflect.Constructor))
+  (:import (clojure.lang BigInt Numbers   JReMatcher)                                 ;;; Added JReMatcher
+           (System.Text.RegularExpressions Regex)                                     ;;; (java.util.regex Pattern Matcher)
+           ))                                                                         ;;; java.lang.reflect.Constructor
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; helpers
@@ -42,12 +42,12 @@
       (recur)))
   reader)
 
-(def ^Pattern int-pattern #"([-+]?)(?:(0)|([1-9][0-9]*)|0[xX]([0-9A-Fa-f]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9A-Za-z]+)|0[0-9]+)(N)?")
-(def ^Pattern ratio-pattern #"([-+]?[0-9]+)/([0-9]+)")
-(def ^Pattern float-pattern #"([-+]?[0-9]+(\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?")
+(def ^Regex int-pattern #"([-+]?)(?:(0)|([1-9][0-9]*)|0[xX]([0-9A-Fa-f]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9A-Za-z]+)|0[0-9]+)(N)?")   ;;; ^Pattern
+(def ^Regex ratio-pattern #"([-+]?[0-9]+)/([0-9]+)")                                                                                 ;;; ^Pattern
+(def ^Regex float-pattern #"([-+]?[0-9]+(\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?")                                                         ;;; ^Pattern
 
 (defn- match-int
-  [^Matcher m]
+  [^JReMatcher m]                                                                    ;;; ^Matcher
   (if (.group m 2)
     (if (.group m 8) 0N 0)
     (let [negate? (= "-" (.group m 1))
@@ -55,42 +55,42 @@
              (.group m 3) [(.group m 3) 10]
              (.group m 4) [(.group m 4) 16]
              (.group m 5) [(.group m 5) 8]
-             (.group m 7) [(.group m 7) (Integer/parseInt (.group m 6))]
+             (.group m 7) [(.group m 7) (Int32/Parse (.group m 6))]                  ;;;  Integer/parseInt
              :else        [nil nil])
           ^String n (a 0)]
       (when n
         (let [bn (BigInteger. n (int (a 1)))
-              bn (if negate? (.negate bn) bn)]
+              bn (if negate? (.Negate bn) bn)]                                       ;;; .negate
           (if (.group m 8)
             (BigInt/fromBigInteger bn)
-            (if (< (.bitLength bn) 64)
-              (.longValue bn)
-              (BigInt/fromBigInteger bn))))))))
+            (let [lv 0 ]                                                             ;;; (if (< (.bitLength bn) 64)
+               (if (.AsInt64 bn (by-ref ^long lv))  lv                               ;;;    (.longValue bn) )
+                 (BigInt/fromBigInteger bn)))))))))
 
 (defn- match-ratio
-  [^Matcher m]
+  [^JReMatcher m]                                                                    ;;; ^Matcher
   (let [^String numerator (.group m 1)
         ^String denominator (.group m 2)
-        numerator (if (.startsWith numerator "+")
+        numerator (if (.StartsWith numerator "+")                                    ;;; .startsWith
                     (subs numerator 1)
                     numerator)]
-    (/ (-> numerator   BigInteger. BigInt/fromBigInteger Numbers/reduceBigInt)
-       (-> denominator BigInteger. BigInt/fromBigInteger Numbers/reduceBigInt))))
+    (/ (-> numerator   BigInteger. BigInt/fromBigInteger Numbers/ReduceBigInt)        ;;; reduceBigInt
+       (-> denominator BigInteger. BigInt/fromBigInteger Numbers/ReduceBigInt))))     ;;; reduceBigInt
 
 (defn- match-float
-  [^String s ^Matcher m]
+  [^String s ^JReMatcher m]                                                          ;;; ^Matcher
   (if (.group m 4)
-    (BigDecimal. ^String (.group m 1))
-    (Double/parseDouble s)))
+    (BigDecimal/Create ^String (.group m 1))                                         ;;; BigDecimal.
+    (Double/Parse s)))                                                               ;;; Double/parseDouble
 
 (defn match-number [^String s]
-  (let [int-matcher (.matcher int-pattern s)]
+  (let [int-matcher (JReMatcher. int-pattern s)]                                     ;;; .matcher
     (if (.matches int-matcher)
       (match-int int-matcher)
-      (let [float-matcher (.matcher float-pattern s)]
+      (let [float-matcher (JReMatcher. float-pattern s)]                             ;;; .matcher
         (if (.matches float-matcher)
           (match-float s float-matcher)
-          (let [ratio-matcher (.matcher ratio-pattern s)]
+          (let [ratio-matcher (JReMatcher. ratio-pattern s)]                         ;;; .matcher
             (when (.matches ratio-matcher)
               (match-ratio ratio-matcher))))))))
 
@@ -98,9 +98,9 @@
   "Parses a string into a vector of the namespace and symbol"
   [^String token]
   (when-not (or (= "" token)
-                (.endsWith token ":")
-                (.startsWith token "::"))
-    (let [ns-idx (.indexOf token "/")]
+                (.EndsWith token ":")                                                 ;;; .endsWith
+                (.StartsWith token "::"))                                             ;;; .startsWith
+    (let [ns-idx (.IndexOf token "/")]                                                ;;; .indexOf
       (if-let [^String ns (and (pos? ns-idx)
                                (subs token 0 ns-idx))]
         (let [ns-idx (inc ns-idx)]
@@ -108,12 +108,12 @@
             (let [sym (subs token ns-idx)]
               (when (and (not (numeric? (nth sym 0)))
                          (not (= "" sym))
-                         (not (.endsWith ns ":"))
+                         (not (.EndsWith ns ":"))                                      ;;; .endsWith 
                          (or (= sym "/")
-                             (== -1 (.indexOf sym "/"))))
+                             (== -1 (.IndexOf sym "/"))))                              ;;; .indexOf
                 [ns sym]))))
         (when (or (= token "/")
-                  (== -1 (.indexOf token "/")))
+                  (== -1 (.IndexOf token "/")))                                        ;;; .indexOf
           [nil token])))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
