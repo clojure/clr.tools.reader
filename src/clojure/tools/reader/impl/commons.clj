@@ -9,7 +9,7 @@
 (ns clojure.tools.reader.impl.commons
   (:refer-clojure :exclude [char])
   (:require [clojure.tools.reader.reader-types :refer [peek-char read-char reader-error]]
-            [clojure.tools.reader.impl.utils :refer [numeric? newline? char]])
+            [clojure.tools.reader.impl.utils :refer [numeric? newline? char normalized-re-group char-value-in-radix]])  ;;; DM: Added char-value-in-radix normalized-re-group
   (:import (clojure.lang BigInt Numbers   JReMatcher)                                 ;;; Added JReMatcher
            (System.Text.RegularExpressions Regex)                                     ;;; (java.util.regex Pattern Matcher)
            ))                                                                         ;;; java.lang.reflect.Constructor
@@ -42,26 +42,26 @@
       (recur)))
   reader)
 
-(def ^Regex int-pattern #"([-+]?)(?:(0)|([1-9][0-9]*)|0[xX]([0-9A-Fa-f]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9A-Za-z]+)|0[0-9]+)(N)?")   ;;; ^Pattern
-(def ^Regex ratio-pattern #"([-+]?[0-9]+)/([0-9]+)")                                                                                 ;;; ^Pattern
-(def ^Regex float-pattern #"([-+]?[0-9]+(\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?")                                                         ;;; ^Pattern
+(def ^Regex int-pattern #"^([-+]?)(?:(0)|([1-9][0-9]*)|0[xX]([0-9A-Fa-f]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9A-Za-z]+)|0[0-9]+)(N)?$")   ;;; ^Pattern  &  add ^ $ around
+(def ^Regex ratio-pattern #"^([-+]?[0-9]+)/([0-9]+)$")                                                                                 ;;; ^Pattern  &  add ^ $ around
+(def ^Regex float-pattern #"^([-+]?[0-9]+(\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?$")                                                         ;;; ^Pattern  &  add ^ $ around
 
 (defn- match-int
   [^JReMatcher m]                                                                    ;;; ^Matcher
-  (if (.group m 2)
-    (if (.group m 8) 0N 0)
-    (let [negate? (= "-" (.group m 1))
+  (if (normalized-re-group m 2)                                                      ;;; .group
+    (if (normalized-re-group m 8) 0N 0)                                              ;;; .group
+    (let [negate? (= "-" (normalized-re-group m 1))                                  ;;; .group
           a (cond
-             (.group m 3) [(.group m 3) 10]
-             (.group m 4) [(.group m 4) 16]
-             (.group m 5) [(.group m 5) 8]
-             (.group m 7) [(.group m 7) (Int32/Parse (.group m 6))]                  ;;;  Integer/parseInt
+             (normalized-re-group m 3) [(normalized-re-group m 3) 10]                                              ;;; .group
+             (normalized-re-group m 4) [(normalized-re-group m 4) 16]                                              ;;; .group
+             (normalized-re-group m 5) [(normalized-re-group m 5) 8]                                               ;;; .group
+             (normalized-re-group m 7) [(normalized-re-group m 7) (Int32/Parse (normalized-re-group m 6))]         ;;;  .group Integer/parseInt
              :else        [nil nil])
           ^String n (a 0)]
       (when n
-        (let [bn (BigInteger. n (int (a 1)))
+        (let [bn (BigInteger/Parse n (int (a 1)))                                    ;;; BigInteger.
               bn (if negate? (.Negate bn) bn)]                                       ;;; .negate
-          (if (.group m 8)
+          (if (normalized-re-group m 8)                                              ;;; .group
             (BigInt/fromBigInteger bn)
             (let [lv 0 ]                                                             ;;; (if (< (.bitLength bn) 64)
                (if (.AsInt64 bn (by-ref ^long lv))  lv                               ;;;    (.longValue bn) )
@@ -69,18 +69,18 @@
 
 (defn- match-ratio
   [^JReMatcher m]                                                                    ;;; ^Matcher
-  (let [^String numerator (.group m 1)
-        ^String denominator (.group m 2)
+  (let [^String numerator (normalized-re-group m 1)                                  ;;; .group
+        ^String denominator (normalized-re-group m 2)                                ;;; .group
         numerator (if (.StartsWith numerator "+")                                    ;;; .startsWith
                     (subs numerator 1)
                     numerator)]
-    (/ (-> numerator   BigInteger. BigInt/fromBigInteger Numbers/ReduceBigInt)        ;;; reduceBigInt
-       (-> denominator BigInteger. BigInt/fromBigInteger Numbers/ReduceBigInt))))     ;;; reduceBigInt
+    (/ (-> numerator   BigInteger/Parse BigInt/fromBigInteger Numbers/ReduceBigInt)        ;;; BigInteger.  reduceBigInt
+       (-> denominator BigInteger/Parse BigInt/fromBigInteger Numbers/ReduceBigInt))))     ;;; BigInteger.  reduceBigInt
 
 (defn- match-float
   [^String s ^JReMatcher m]                                                          ;;; ^Matcher
-  (if (.group m 4)
-    (BigDecimal/Create ^String (.group m 1))                                         ;;; BigDecimal.
+  (if (normalized-re-group m 4)                                                      ;;; .group
+    (BigDecimal/Create ^String (normalized-re-group m 1))                            ;;; BigDecimal.    .group
     (Double/Parse s)))                                                               ;;; Double/parseDouble
 
 (defn match-number [^String s]

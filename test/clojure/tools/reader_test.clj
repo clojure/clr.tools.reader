@@ -89,12 +89,12 @@
   (is (= (bar. 1 2) (read-string "#clojure.tools.reader_test.bar[1 2]"))))
 
 (deftest read-ctor
-  (is (= "foo" (read-string "#java.lang.String[\"foo\"]"))))
+  (is (= "CCC" (read-string "#System.String[\\C 3]"))))                                        ;;; java.lang.String  "foo"   \"foo\"  added int arg
 
 (defrecord JSValue [v])
 
 (deftest reader-conditionals
-  (let [opts {:read-cond :allow :features #{:clj}}]
+  (let [opts {:read-cond :allow :features #{:cljr}}]
     (are [out s opts] (= out (read-string opts s))
          ;; basic read-cond
          '[foo-form] "[#?(:foo foo-form :bar bar-form)]" {:read-cond :allow :features #{:foo}}
@@ -104,35 +104,35 @@
          'nil "#?(:default nil)" opts
 
          ;; environmental features
-         "clojure" "#?(:clj \"clojure\" :cljs \"clojurescript\" :default \"default\")"  opts
+         "clojure" "#?(:cljr \"clojure\" :cljs \"clojurescript\" :default \"default\")"  opts
 
          ;; default features
-         "default" "#?(:cljr \"clr\" :cljs \"cljs\" :default \"default\")" opts
+         "default" "#?(:clj \"clr\" :cljs \"cljs\" :default \"default\")" opts                                 ;;; :cljr => :clj -- because we need to trigger default
 
          ;; splicing
-         [] "[#?@(:clj [])]" opts
-         [:a] "[#?@(:clj [:a])]" opts
-         [:a :b] "[#?@(:clj [:a :b])]" opts
-         [:a :b :c] "[#?@(:clj [:a :b :c])]" opts
+         [] "[#?@(:cljr [])]" opts                                                                             ;;; :clj
+         [:a] "[#?@(:cljr [:a])]" opts                                                                         ;;; :clj
+         [:a :b] "[#?@(:cljr [:a :b])]" opts                                                                   ;;; :clj
+         [:a :b :c] "[#?@(:cljr [:a :b :c])]" opts                                                             ;;; :clj
 
          ;; nested splicing
-         [:a :b :c :d :e] "[#?@(:clj [:a #?@(:clj [:b #?@(:clj [:c]) :d]):e])]" opts
-         '(+ 1 (+ 2 3)) "(+ #?@(:clj [1 (+ #?@(:clj [2 3]))]))" opts
-         '(+ (+ 2 3) 1) "(+ #?@(:clj [(+ #?@(:clj [2 3])) 1]))" opts
-         [:a [:b [:c] :d] :e] "[#?@(:clj [:a [#?@(:clj [:b #?@(:clj [[:c]]) :d])] :e])]" opts
+         [:a :b :c :d :e] "[#?@(:cljr [:a #?@(:cljr [:b #?@(:cljr [:c]) :d]):e])]" opts                        ;;; :clj
+         '(+ 1 (+ 2 3)) "(+ #?@(:cljr [1 (+ #?@(:cljr [2 3]))]))" opts                                         ;;; :clj
+         '(+ (+ 2 3) 1) "(+ #?@(:cljr [(+ #?@(:cljr [2 3])) 1]))" opts                                         ;;; :clj
+         [:a [:b [:c] :d] :e] "[#?@(:cljr [:a [#?@(:cljr [:b #?@(:cljr [[:c]]) :d])] :e])]" opts               ;;; :clj
 
          ;; bypass unknown tagged literals
-         [1 2 3] "#?(:cljs #js [1 2 3] :clj [1 2 3])" opts
-         :clojure "#?(:foo #some.nonexistent.Record {:x 1} :clj :clojure)" opts)
+         [1 2 3] "#?(:cljs #js [1 2 3] :cljr [1 2 3])" opts                                                    ;;; :clj
+         :clojure "#?(:foo #some.nonexistent.Record {:x 1} :cljr :clojure)" opts)                              ;;; :clj
 
-    (are [re s opts] (is (thrown-with-msg? Exception re (read-string opts s)))                     ;;; RuntimeException
+    (are [re s opts] (is (thrown-with-msg? Exception re (read-string opts s)))                                 ;;; RuntimeException
          #"Feature should be a keyword" "#?((+ 1 2) :a)" opts
-         #"even number of forms" "#?(:cljs :a :clj)" opts
-         #"read-cond-splicing must implement" "(#?@(:clj :a))" opts
+         #"even number of forms" "#?(:cljs :a :cljr)" opts                                                    ;;; :clj
+         #"read-cond-splicing must implement" "(#?@(:cljr :a))" opts                                           ;;; :clj
          #"is reserved" "(#?@(:foo :a :else :b))" opts
          #"must be a list" "#?[:foo :a :else :b]" opts
-         #"Conditional read not allowed" "#?[:clj :a :default nil]" {:read-cond :BOGUS}
-         #"Conditional read not allowed" "#?[:clj :a :default nil]" {}))
+         #"Conditional read not allowed" "#?[:cljr :a :default nil]" {:read-cond :BOGUS}                       ;;; :clj
+         #"Conditional read not allowed" "#?[:cljr :a :default nil]" {}))                                      ;;; :clj
   (binding [*data-readers* {'js (fn [v] (JSValue. v) )}]
     (is (= (JSValue. [1 2 3])
            (read-string {:features #{:cljs} :read-cond :allow} "#?(:cljs #js [1 2 3] :foo #foo [1])")))))

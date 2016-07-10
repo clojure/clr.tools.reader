@@ -125,3 +125,47 @@
 
 (defn second' [[a b]]
   (when-not a b))
+
+  
+;;; DM: ADDED FOR COMPATIBILITY WITH ClojureCLR 1.8.
+;;; These will not be needed in ClojureCLR 1.9 and later.
+
+(defn char-value-in-radix 
+  "Reproduces clojure.lang.LispReader.CharValueInRadix.  It was private in ClojureCLR 1.8 and earlier.
+   This handles most of the cases (except wide Latin digits) of the Java Character/digit"
+   [c radix]
+   (cond
+     (Char/IsDigit (char c)) 
+	   (let [x (- c (long \0))] (if (< x radix) x -1))
+	 (<= (long \A) c (long \Z)) 
+	   (let [x (- c (long \A))] (if (< x (- radix 10)) (+ x 10) -1))
+	 (<= (long \a) c (long \z)) 
+	   (let [x (- c (long \a))] (if (< x (- radix 10)) (+ x 10) -1))
+	 :else 
+	   -1))
+	 
+(def ^:private ^System.Reflection.FieldInfo JReMatcher-match-fieldinfo 
+  (.GetField clojure.lang.JReMatcher "_match" (enum-or System.Reflection.BindingFlags/NonPublic System.Reflection.BindingFlags/Instance)))
+	 
+(defn normalized-re-group 
+  "JReMatcher in Clojure 1.8 and before is not identical to java.util.regex.Matcher on the group method.
+   The Java version returns null on an unsuccessful subexpression match.  JReMatcher returns the empty string.
+   Call (normalized-re-group matcher i) instead of (.group matcher i)  when this matters."
+   [^clojure.lang.JReMatcher m index]
+   (let [ match ^System.Text.RegularExpressions.Match (.GetValue JReMatcher-match-fieldinfo m)
+         groups ^System.Text.RegularExpressions.GroupCollection (.Groups match)
+		 group ^System.Text.RegularExpressions.Group (.get_Item groups (int index))]
+	  (if (.Success group)
+	    (.Value group)
+		nil)))   
+   
+(defn add-front
+  "Add sequence of items to the front of a System.Collections.Generic.LinkedList.
+   This is supposed to handle the same situation as (.addAll ^java.util.List lst 0 items) used in the conditonal form splicer code.
+   Someday, find a better way to code this."
+   [^|System.Collections.Generic.LinkedList`1[System.Object]| lst items]
+   (let [ first-node (.First lst)]
+	  (doseq [item (reverse items)]
+        (if first-node 
+		  (.AddAfter lst first-node item)
+		  (.AddFirst lst item)))))

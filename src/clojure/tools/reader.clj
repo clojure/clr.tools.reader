@@ -104,7 +104,7 @@
      (loop [i offset uc 0]
        (if (== i l)
          (char uc)
-         (let [d (clojure.lang.LispReader/CharValueInRadix (int (nth token i)) (int base))]       ;;; Character/digit
+         (let [d (char-value-in-radix (int (nth token i)) (int base))]                            ;;; Character/digit
            (if (== d -1)
              (throw (ArgumentException. (str "Invalid digit: " (nth token i))))                   ;;; IllegalArgumentException
              (recur (inc i) (long (+ d (* uc base))))))))))
@@ -112,7 +112,7 @@
   ([rdr initch base length exact?]
    (let [base (long base)
          length (long length)]
-     (loop [i 1 uc (long (clojure.lang.LispReader/CharValueInRadix (int initch) (int base)))]     ;;; Character/digit
+     (loop [i 1 uc (long (char-value-in-radix (int initch) (int base)))]                          ;;; Character/digit
        (if (== uc -1)
          (throw (ArgumentException. (str "Invalid digit: " initch)))                              ;;; IllegalArgumentException
          (if-not (== i length)
@@ -124,7 +124,7 @@
                  (throw (ArgumentException.                                                       ;;; IllegalArgumentException
                          (str "Invalid character length: " i ", should be: " length)))
                  (char uc))
-               (let [d (clojure.lang.LispReader/CharValueInRadix (int ch) (int base))]            ;;; Character/digit
+               (let [d (char-value-in-radix (int ch) (int base))]                                 ;;; Character/digit
                  (read-char rdr)
                  (if (== d -1)
                    (throw (ArgumentException. (str "Invalid digit: " ch)))                        ;;; IllegalArgumentException
@@ -281,7 +281,7 @@
       \b "\b"
       \f "\f"
       \u (let [ch (read-char rdr)]
-           (if (== -1 (clojure.lang.LispReader/CharValueInRadix (int ch) 16))       ;;; Character/digit 
+           (if (== -1 (char-value-in-radix (int ch) 16))                             ;;; Character/digit 
              (reader-error rdr "Invalid unicode escape: \\u" ch)
              (read-unicode-char rdr ch 16 4 true)))
       (if (numeric? ch)
@@ -490,7 +490,7 @@
       (if splicing
         (if (instance? |System.Collections.Generic.IList`1[System.Object]| result)                    ;;; List
           (do
-            (doseq [x (seq result)] (.AddLast ^|System.Collections.Generic.LinkedList`1[System.Object]| pending-forms x)) ;;; (.addAll ^List pending-forms 0 ^List result)
+            (add-front pending-forms result)                                                          ;;; (.addAll ^List pending-forms 0 ^List result)
             rdr)
           (reader-error rdr "Spliced form list in read-cond-splicing must implement java.util.List."))
         result))))
@@ -904,7 +904,7 @@
        (loop []
          (log-source reader
            (if (seq pending-forms)
-             (.RemoveFirst ^|System.Collections.Generic.LinkedList`1[System.Object]| pending-forms)      ;;; .remove ^List  0
+             (let [pf ^|System.Collections.Generic.LinkedList`1[System.Object]| pending-forms val (-> pf .First .Value)] (.RemoveFirst pf) val)      ;;; (.remove ^List  pending-forms 0)
              (let [ch (read-char reader)]
                (cond
                 (whitespace? ch) (recur)

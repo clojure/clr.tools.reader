@@ -87,7 +87,7 @@
      (loop [i offset uc 0]
        (if (== i l)
          (char uc)
-         (let [d (clojure.lang.LispReader/CharValueInRadix (int (nth token i)) (int base))]     ;;; Character/digit
+         (let [d (char-value-in-radix (int (nth token i)) (int base))]                          ;;; Character/digit
            (if (== d -1)
              (throw (ArgumentException. (str "Invalid digit: " (nth token i))))                 ;;; IllegalArgumentException.
              (recur (inc i) (long (+ d (* uc base))))))))))
@@ -95,7 +95,7 @@
   ([rdr initch base length exact?]
    (let [length (long length)
          base (long base)]
-     (loop [i 1 uc (clojure.lang.LispReader/CharValueInRadix (int initch) (int base))]          ;;; Character/digit
+     (loop [i 1 uc (char-value-in-radix (int initch) (int base))]                               ;;; Character/digit
        (if (== uc -1)
          (throw (ArgumentException. (str "Invalid digit: " initch)))                            ;;; IllegalArgumentException.
          (if-not (== i length)
@@ -107,7 +107,7 @@
                  (throw (ArgumentException.                                                     ;;; IllegalArgumentException.
                          (str "Invalid character length: " i ", should be: " length)))
                  (char uc))
-               (let [d (clojure.lang.LispReader/CharValueInRadix (int ch) (int base))]          ;;; Character/digit
+               (let [d (char-value-in-radix (int ch) (int base))]                               ;;; Character/digit
                  (read-char rdr)
                  (if (== d -1)
                    (throw (ArgumentException. (str "Invalid digit: " ch)))                      ;;; IllegalArgumentException.
@@ -218,7 +218,7 @@
       \b "\b"
       \f "\f"
       \u (let [ch (read-char rdr)]
-           (if (== -1 (clojure.lang.LispReader/CharValueInRadix (int ch) 16))       ;;; Character/digit
+           (if (== -1 (char-value-in-radix (int ch) 16))                          ;;; Character/digit
              (reader-error rdr "Invalid unicode escape: \\u" ch)
              (read-unicode-char rdr ch 16 4 true)))
       (if (numeric? ch)
