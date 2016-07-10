@@ -373,7 +373,7 @@
   [rdr _ opts pending-forms]
   (log-source rdr
     (let [[line column] (starting-line-col-info rdr)
-          m (desugar-meta (read* rdr true nil opts pending-forms))]
+          m (desugar-meta (read* rdr true nil opts pending-forms))]  
       (when-not (map? m)
         (reader-error rdr "Metadata must be Symbol, Keyword, String or Map"))
       (let [o (read* rdr true nil opts pending-forms)]

@@ -14,7 +14,7 @@
              [read-char reader-error unread peek-char indexing-reader?
               get-line-number get-column-number get-file-name string-push-back-reader]]
             [clojure.tools.reader.impl.utils :refer
-             [char ex-info? whitespace? numeric? desugar-meta namespace-keys second']]
+             [char ex-info? whitespace? numeric? desugar-meta namespace-keys second'  char-value-in-radix ]]   ;;; DM: Added char-value-in-radix 
             [clojure.tools.reader.impl.commons :refer :all]
             [clojure.tools.reader :refer [default-data-readers]])
   (:import (clojure.lang PersistentHashSet IMeta RT PersistentVector)))
@@ -192,9 +192,8 @@
   [rdr _ opts]
   (let [l (to-array (read-delimited \} rdr opts))]
     (when (== 1 (bit-and (alength l) 1))
-    (when (== 1 (bit-and (alength l) 1))
       (reader-error rdr "Map literal must contain an even number of forms"))
-    (RT/map l))))
+    (RT/map l)))
 
 (defn- read-number
   [reader initch opts]
