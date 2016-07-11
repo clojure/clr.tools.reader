@@ -1,4 +1,4 @@
-(defproject org.clojure.clr/tools.reader "0.1.0-SNAPSHOT"
+(defproject org.clojure.clr/tools.reader "1.0.0"
   :description "Port of clojure.org/tool.reader to ClojureCLR"
   :url "https://github.com/clojure/clr.tools.reader"
   :license {:name "Eclipse Public License"
