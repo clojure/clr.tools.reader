@@ -257,9 +257,6 @@
       "true" true
       "false" false
       "/" '/
-      "NaN" Double/NaN
-      "-Infinity" Double/NegativeInfinity                                              ;;; NEGATIVE_INFINITY
-      ("Infinity" "+Infinity") Double/PositiveInfinity                                 ;;; POSITIVE_INFINITY
 
       (or (when-let [p (parse-symbol token)]
             (symbol (p 0) (p 1)))
@@ -319,6 +316,15 @@
               (RT/map (to-array (mapcat list (namespace-keys (str ns) keys) vals)))))
           (err/throw-ns-map-no-map rdr token)))
       (err/throw-bad-ns rdr token))))
+
+(defn- read-symbolic-value
+  [rdr _ opts]
+  (let [sym (read rdr true nil opts)]
+    (case sym
+      Inf Double/PositiveInfinity                                ;;; Double/POSITIVE_INFINITY
+      -Inf Double/NegativeInfinity                               ;;; Double/NEGATIVE_INFINITY
+      NaN Double/NaN
+      (err/reader-error rdr (str "Invalid token: ##" sym)))))
 	  
 (defn- macros [ch]
   (case ch
@@ -344,6 +350,7 @@
     \! read-comment
     \_ read-discard
     \: read-namespaced-map
+	\# read-symbolic-value
     nil))
 
 (defn- read-tagged [rdr initch opts]

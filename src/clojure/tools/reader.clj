@@ -310,9 +310,6 @@
         "true" true
         "false" false
         "/" '/
-        "NaN" Double/NaN
-        "-Infinity" Double/NegativeInfinity                                            ;;; NEGATIVE_INFINITY
-        ("Infinity" "+Infinity") Double/PositiveInfinity                               ;;; POSITIVE_INFINITY
 
         (or (when-let [p (parse-symbol token)]
               (with-meta (symbol (p 0) (p 1))
@@ -339,8 +336,7 @@
        (ns-aliases *ns*)) sym))
 
 (defn- resolve-ns [sym]
-  (or ((or *alias-map*
-           (ns-aliases *ns*)) sym)
+  (or (resolve-alias sym)
       (find-ns sym)))
 
 (defn- read-keyword
@@ -410,6 +406,15 @@
   [rdr _ opts pending-forms]
   (doto rdr
     (read* true nil opts pending-forms)))
+
+(defn- read-symbolic-value
+  [rdr _ opts pending-forms]
+  (let [sym (read* rdr true nil opts pending-forms)]
+    (case sym
+      Inf Double/PositiveInfinity                                     ;;; Double/POSITIVE_INFINITY
+      -Inf Double/NegativeInfinity                                    ;;; Double/NEGATIVE_INFINITY
+      NaN Double/NaN
+      (err/reader-error rdr (str "Invalid token: ##" sym)))))
 
 (def ^:private RESERVED_FEATURES #{:else :none})
 
@@ -802,6 +807,7 @@
     \_ read-discard
     \? read-cond
     \: read-namespaced-map
+    \# read-symbolic-value	
     nil))
 
 (defn- read-ctor [rdr class-name opts pending-forms]
