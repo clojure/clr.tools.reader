@@ -700,7 +700,7 @@
 
                (.EndsWith sym ".")                                            ;;; .endsWith
                (let [csym (symbol (subs sym 0 (dec (count sym))))]
-                 (symbol (String/Concat (name (resolve-symbol csym)) ".")))   ;;; .concat
+                 (symbol (str (resolve-symbol csym) ".")))
                :else (resolve-symbol form)))))
 
     (unquote? form) (second form)
