@@ -291,7 +291,7 @@
         new-frame (assoc-in @frame [:offset] (.get_Length buffer))]           ;;; .length
     (with-bindings {frame new-frame}
       (let [ret (f)]
-        (if (instance? clojure.lang.IMeta ret)
+        (if (instance? clojure.lang.IObj ret)
           (merge-meta ret {:source (peek-source-log frame)})
           ret)))))
 
