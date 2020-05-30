@@ -126,7 +126,7 @@
          :clojure "#?(:foo #some.nonexistent.Record {:x 1} :cljr :clojure)" opts)                              ;;; :clj
 
     (are [re s opts] (is (thrown-with-msg? Exception re (read-string opts s)))                                 ;;; RuntimeException
-         #"Feature should be a keyword" "#?((+ 1 2) :a)" opts
+         #"Features must be keywords" "#?((+ 1 2) :a)" opts
          #"even number of forms" "#?(:cljs :a :cljr)" opts                                                    ;;; :clj
          #"read-cond-splicing must implement" "(#?@(:cljr :a))" opts                                           ;;; :clj
          #"is reserved" "(#?@(:foo :a :else :b))" opts
