@@ -974,10 +974,8 @@
   ([reader eof-error? sentinel]
    (let [ret (read* reader eof-error? sentinel nil {} (|System.Collections.Generic.LinkedList`1[System.Object]|.))]                                                  ;;;  LinkedList.
      (when (source-logging-reader? reader)
-       (let [^StringBuilder buf (:buffer @(.source-log-frames ^SourceLoggingPushbackReader reader))
-             len (.Length buf)]                                                                                                                                      ;;; .length
-         (when (pos? len)
-           (.Remove buf 0 len))))                                                                                                                                    ;;; .delete
+       (let [^StringBuilder buf (:buffer @(.source-log-frames ^SourceLoggingPushbackReader reader))]
+         (.set_Length buf 0)))                                                                                                                                       ;;; .set_Length                                                                                                                             ;;; .delete
      ret)))  
 
 (defn read-string
