@@ -1010,5 +1010,5 @@
    (let [^StringBuilder buf (:buffer @(.source-log-frames reader))
          offset (.Length buf)                                                                         ;;; .length
          o (log-source reader (apply read reader args))
-         s (subs (str buf) offset)]
+         s (.Trim (subs (str buf) offset))]                                                           ;;; .trim
      [o s])))
