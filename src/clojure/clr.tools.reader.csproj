@@ -3,8 +3,17 @@
     <TargetFrameworks>net461;netstandard2.1</TargetFrameworks>
     <OutputType>Library</OutputType>
     <NoStandardLibraries>false</NoStandardLibraries>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
   </PropertyGroup>
+  <PropertyGroup>
+    <Company>ClojureCLR contributors</Company>
+    <AssemblyTitle>clr.tools.reader</AssemblyTitle>
+    <Description>A Clojure reader and edn-only reader</Description>
+    <Product>clr.tools.reader</Product>
+    <Copyright>Copyright © Rich Hickey, David Miller 2020</Copyright>
+    <Version>1.3.2.0</Version>
+  </PropertyGroup>
+  
   <PropertyGroup>
     <RootNamespace>clojure</RootNamespace>
   </PropertyGroup>
@@ -16,7 +25,11 @@
     <EmbeddedResource Include="tools\reader\impl\utils.clj" />
     <EmbeddedResource Include="tools\reader\reader_types.clj" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
   <ProjectExtensions>
     <VisualStudio AllowExistingFolder="true" />
   </ProjectExtensions>
 </Project>
+
