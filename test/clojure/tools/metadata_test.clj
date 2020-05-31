@@ -65,8 +65,7 @@
        (reader-types/indexing-push-back-reader 1 filename))
    (-> (test-reader s)
        #_(LineNumberingTextReader.)                                     ;;; BufferedReader -- no exact equivalent
-       (reader-types/indexing-push-back-reader 1 filename))
-   ])
+       (reader-types/indexing-push-back-reader 1 filename))])
 
 (defn read-metadata-helper [reader]
   (let [first-form (read reader)
