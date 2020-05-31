@@ -102,23 +102,25 @@
     (when (instance? IDisposable rdr)                                                     ;;; Closeable
       (.Dispose ^IDisposable rdr))))                                                      ;;; .close ^Closeable
 
-(defn- normalize-newline [rdr ch]
-  (if (identical? \return ch)
-    (let [c (peek-char rdr)]
-      (when (or (identical? \formfeed c)
-                (identical? \newline c))
-        (read-char rdr))
-      \newline)
-    ch))
-
 (deftype IndexingPushbackReader
     [rdr ^:unsynchronized-mutable ^long line ^:unsynchronized-mutable ^long column
      ^:unsynchronized-mutable line-start? ^:unsynchronized-mutable prev
-     ^:unsynchronized-mutable ^long prev-column file-name]
+     ^:unsynchronized-mutable ^long prev-column file-name
+     ^:unsynchronized-mutable normalize?]
   Reader
   (read-char [reader]
     (when-let [ch (read-char rdr)]
-      (let [ch (normalize-newline rdr ch)]
+      (let [ch (if normalize?
+                 (do (set! normalize? false)
+                     (if (or (identical? \newline ch)
+                             (identical? \formfeed ch))
+                       (read-char rdr)
+                       ch))
+                 ch)
+            ch (if (identical? \return ch)
+                 (do (set! normalize? true)
+                     \newline)
+                 ch)]
         (set! prev line-start?)
         (set! line-start? (newline? ch))
         (when line-start?
@@ -152,12 +154,10 @@
 
 ;; Java interop
 
-(extend-type clojure.lang.PushbackTextReader                                           ;;; java.io.PushbackReader
+(extend-type clojure.lang.PushbackTextReader                                         ;;; java.io.PushbackReader
   Reader
   (read-char [rdr]
-    (let [c (.Read ^clojure.lang.PushbackTextReader rdr)]                              ;;; .read ^java.io.PushbackReader
-      (when (>= c 0)
-        (normalize-newline rdr (char c)))))
+    (char (.Read ^clojure.lang.PushbackTextReader rdr)))                             ;;; .read ^java.io.PushbackReader
 
   (peek-char [rdr]
     (when-let [c (read-char rdr)]
@@ -167,13 +167,13 @@
   IPushbackReader
   (unread [rdr c]
     (when c
-      (.Unread  ^clojure.lang.PushbackTextReader rdr (int c)))))                       ;;;  .unread ^java.io.PushbackReader
+      (.Unread  ^clojure.lang.PushbackTextReader rdr (int c)))))                     ;;;  .unread ^java.io.PushbackReader
 
-(extend LineNumberingTextReader                                                        ;;; LineNumberingPushbackReader
+(extend LineNumberingTextReader                                                      ;;; LineNumberingPushbackReader
   IndexingReader
-  {:get-line-number (fn [rdr] (.LineNumber ^LineNumberingTextReader rdr))              ;;; .getLineNumber ^LineNumberingPushbackReader
+  {:get-line-number (fn [rdr] (.LineNumber ^LineNumberingTextReader rdr))            ;;; .getLineNumber ^LineNumberingPushbackReader
    :get-column-number (fn [rdr]
-                        (.ColumnNumber ^LineNumberingTextReader rdr))                  ;;; .getColumnNumber ^LineNumberingPushbackReader
+                        (.ColumnNumber ^LineNumberingTextReader rdr))                ;;; .getColumnNumber ^LineNumberingPushbackReader
    :get-file-name (constantly nil)})
 
 (defprotocol ReaderCoercer
@@ -245,11 +245,22 @@
 (deftype SourceLoggingPushbackReader
     [rdr ^:unsynchronized-mutable ^long line ^:unsynchronized-mutable ^long column
      ^:unsynchronized-mutable line-start? ^:unsynchronized-mutable prev
-     ^:unsynchronized-mutable ^long prev-column file-name source-log-frames]
+     ^:unsynchronized-mutable ^long prev-column file-name source-log-frames
+     ^:unsynchronized-mutable normalize?]
   Reader
   (read-char [reader]
     (when-let [ch (read-char rdr)]
-      (let [ch (normalize-newline rdr ch)]
+      (let [ch (if normalize?
+                 (do (set! normalize? false)
+                     (if (or (identical? \newline ch)
+                             (identical? \formfeed ch))
+                       (read-char rdr)
+                       ch))
+                 ch)
+            ch (if (identical? \return ch)
+                 (do (set! normalize? true)
+                     \newline)
+                 ch)]
         (set! prev line-start?)
         (set! line-start? (newline? ch))
         (when line-start?
@@ -347,7 +358,7 @@
    (indexing-push-back-reader s-or-rdr buf-len nil))
   ([s-or-rdr buf-len file-name]
    (IndexingPushbackReader.
-    (to-pbr s-or-rdr buf-len) 1 1 true nil 0 file-name)))
+    (to-pbr s-or-rdr buf-len) 1 1 true nil 0 file-name false)))
 
 (defn ^IDisposable source-logging-push-back-reader                                            ;;; ^Closeable
   "Creates a SourceLoggingPushbackReader from a given string or PushbackReader"
@@ -366,7 +377,8 @@
     file-name
     (doto (make-var)
       (alter-var-root (constantly {:buffer (StringBuilder.)
-                                   :offset 0}))))))
+                                   :offset 0})))
+    false)))
 
 (defn read-line
   "Reads a line from the reader or from *in* if no reader is specified"
