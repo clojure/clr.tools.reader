@@ -970,13 +970,16 @@
   {:arglists '([] [reader] [opts reader] [reader eof-error? eof-value])}
   ([] (read *in* true nil))
   ([reader] (read reader true nil))
-  ([{eof :eof :as opts :or {eof :eofthrow}} reader] (read* reader (= eof :eofthrow) eof nil opts (|System.Collections.Generic.LinkedList`1[System.Object]|.)))       ;;;  LinkedList.
+  ([{eof :eof :as opts :or {eof :eofthrow}} reader]
+   (when (source-logging-reader? reader)
+     (let [^StringBuilder buf (:buffer @(.source-log-frames ^SourceLoggingPushbackReader reader))]
+       (.set_Length buf 0)))                                                                                       ;;; .set_Length
+   (read* reader (= eof :eofthrow) eof nil opts (|System.Collections.Generic.LinkedList`1[System.Object]|.)))      ;;;  LinkedList.  
   ([reader eof-error? sentinel]
-   (let [ret (read* reader eof-error? sentinel nil {} (|System.Collections.Generic.LinkedList`1[System.Object]|.))]                                                  ;;;  LinkedList.
-     #_(when (source-logging-reader? reader)
-       (let [^StringBuilder buf (:buffer @(.source-log-frames ^SourceLoggingPushbackReader reader))]
-         (.set_Length buf 0)))                                                                                                                                       ;;; .set_Length                                                                                                                             ;;; .delete
-     ret)))  
+   (when (source-logging-reader? reader)
+     (let [^StringBuilder buf (:buffer @(.source-log-frames ^SourceLoggingPushbackReader reader))]
+       (.set_Length buf 0)))                                                                                       ;;; .set_Length
+   (read* reader eof-error? sentinel nil {} (|System.Collections.Generic.LinkedList`1[System.Object]|.))))         ;;;  LinkedList.   
 
 (defn read-string
   "Reads one object from the string s.
@@ -1007,8 +1010,6 @@
   Returns a vector containing the object read and the (whitespace-trimmed) string read."
   ([] (read+string (source-logging-push-back-reader *in*)))
   ([^SourceLoggingPushbackReader reader & args]
-   (let [^StringBuilder buf (:buffer @(.source-log-frames reader))
-         offset (.Length buf)                                                                         ;;; .length
-         o (log-source reader (apply read reader args))
-         s (.Trim (subs (str buf) offset))]                                                           ;;; .trim
+   (let [o (log-source reader (apply read reader args))
+         s (.Trim (str (:buffer @(.source-log-frames reader))))]                              ;;; .trim                                                        ;;; .trim
      [o s])))
