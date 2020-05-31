@@ -1010,6 +1010,8 @@
   Returns a vector containing the object read and the (whitespace-trimmed) string read."
   ([] (read+string (source-logging-push-back-reader *in*)))
   ([^SourceLoggingPushbackReader reader & args]
-   (let [o (log-source reader (apply read reader args))
+   (let [o (log-source reader (if (= 1 (count args))
+                                (read (first args) reader)
+                                (apply read reader args)))
          s (.Trim (str (:buffer @(.source-log-frames reader))))]                              ;;; .trim                                                        ;;; .trim
      [o s])))
