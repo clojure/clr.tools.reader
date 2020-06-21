@@ -14,7 +14,7 @@ Nuget reference:
 
 Leiningen/Clojars reference:
 
-   [org.clojure.clr/tools.reader "1.3.2"]
+   [org.clojure.clr/tools.reader "1.3.2.1"]
 
 
 # Copyright and License #
