@@ -25,10 +25,6 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <None Remove="tools\reader\impl\errors.clj" />
-    <None Remove="tools\reader\impl\inspect.clj" />
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="tools\reader.clj" />
     <EmbeddedResource Include="tools\reader\default_data_readers.clj" />
     <EmbeddedResource Include="tools\reader\edn.clj" />
