@@ -14,7 +14,7 @@ Nuget reference:
 
 Leiningen/Clojars reference:
 
-   [org.clojure.clr/tools.reader "1.3.2.2"]
+   [org.clojure.clr/tools.reader "1.3.4.1"]
 
 
 # Note to maintainers
