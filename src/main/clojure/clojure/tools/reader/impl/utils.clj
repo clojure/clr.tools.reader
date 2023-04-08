@@ -23,7 +23,7 @@
              (<= (read-string (subs qualifier (dec (count qualifier))))
                 5)))))
 
-(defmacro compile-when [cond & then]
+#_(defmacro compile-when [cond & then]             -- compile-when has been added to ClojureCLR itself
   (when (eval cond)
     `(do ~@then)))
 
