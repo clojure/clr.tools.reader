@@ -200,28 +200,3 @@
                           ["[a\rb]" "[a\r b]" "[a \rb]"])]
     (doseq [pairs (partition 2 1 read-vals)]
       (is (= (first pairs) (second pairs))))))
-	  
-;; DM: Added tests for |-quoting in symbols.
-
-(deftest symbols-unquoted
-  (is (= 'abc (read-string "abc")))
-  (is (= '*+!-_? (read-string  "*+!-_?")))
-  (is (= 'abc:def:ghi (read-string  "abc:def:ghi")))
-  (is (= 'abc/def (read-string  "abc/def")))
-  (is (= 'abc.def/ghi (read-string  "abc.def/ghi")))
-  (is (= 'abc/def.ghi (read-string  "abc/def.ghi")))
-  (is (= 'abc:def/ghi:jkl.mno (read-string  "abc:def/ghi:jkl.mno")))
-  )
-  
-(deftest symbols-quoted
-
-  (is (= 'abc (read-string "|abc|")))
-  (is (= 'abc (read-string "a|b|c")))
-  (is (= '|abc[]()| (read-string "|abc[]()|")))
-  (is (= '|abc/def| (read-string "|abc/def|")))
-  (is (= 'abc|/|def (read-string "abc|/|def")))
-  (is (= '|abc|/|def| (read-string "|abc|/|def|")))  
-  (is (= '|abc||def| (read-string "|abc||def|")))
-  
-  )
-  

@@ -37,6 +37,53 @@
       (identical? \` ch)
       (identical? \~ ch)))
 
+;; Some serious hacking on read-token to make it work with |-quoting on symbols.
+
+;; This was the loop after all the leading-character tests in read-token.
+;; Now used for anything other than :symbol
+(defn- ^String read-token-not-symbol
+  [rdr kind initch validate-leading?]
+  (loop [sb (StringBuilder.)
+         ch initch]
+    (if (or (whitespace? ch)
+            (macro-terminating? ch)
+            (nil? ch))
+	  (do (unread rdr ch)
+          (str sb))
+      (if (not-constituent? ch)
+        (err/throw-bad-char rdr kind ch)
+        (recur (doto sb (.Append ch)) (read-char rdr))))))
+  
+ ;; This version allows for |-quoting. 
+  
+(defn- read-token-symbol  
+  [rdr kind initch validate-leading?]
+  (let [rawMode (= initch \|)
+        sb (StringBuilder.) 
+		startch (if rawMode (read-char rdr) initch)]
+    (when rawMode
+	    (.Append sb initch))
+    (loop [sb sb ch startch rawMode rawMode]
+      (when (and rawMode (nil? ch))
+	    (err/throw-eof-reading rdr :symbol sb))  
+	  (if rawMode
+	    (cond 
+	      (nil? ch)
+		  (err/throw-eof-reading rdr :symbol sb)
+	      (and (= ch \|) (= (peek-char rdr) '\|))   ;; || in raw mode, eat both
+	      (do (read-char rdr)                       ;; eat the second |
+		      (recur (.Append sb "||") (read-char rdr) (boolean true)))
+	      :else (recur (.Append sb ch) (read-char rdr) (boolean (not= ch \|))))
+	    (if (or (whitespace? ch)
+                (macro-terminating? ch)
+                (nil? ch))
+          (do (when ch
+                (unread rdr ch))
+              (str sb))
+		  (if (not-constituent? ch)
+            (err/throw-bad-char rdr kind ch)	  
+            (recur (.Append sb ch) (read-char rdr) rawMode)))))))
+  
 (defn- ^String read-token
   ([rdr kind initch]
      (read-token rdr kind initch true))
@@ -49,18 +96,12 @@
       (and validate-leading?
            (not-constituent? initch))
       (err/throw-bad-char rdr kind initch)
-
+       
+	  (= kind :symbol)
+	  (read-token-symbol  rdr kind initch validate-leading?)
+	  
       :else
-      (loop [sb (StringBuilder.)
-             ch initch]
-        (if (or (whitespace? ch)
-                (macro-terminating? ch)
-                (nil? ch))
-          (do (unread rdr ch)
-              (str sb))
-          (if (not-constituent? ch)
-            (err/throw-bad-char rdr kind ch)
-            (recur (doto sb (.Append ch)) (read-char rdr))))))))                    ;;; .append
+	  (read-token-not-symbol rdr kind initch validate-leading?))))
 
 
 

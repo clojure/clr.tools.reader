@@ -74,28 +74,28 @@
   [rdr kind initch]
   (let [rawMode (= initch \|)
         sb (StringBuilder.) 
-		startch (if rawMode (read-char rdr) initch)]                     ;; without the (or false ...) we get a recur type error on boolean not matching boolean -- definitely a bug in the recur logic to track down.
+		startch (if rawMode (read-char rdr) initch)]
     (when rawMode
 	    (.Append sb initch))
     
-  (loop [sb sb ch startch rawMode rawMode]
-    (when (and rawMode (nil? ch))
-	  (err/throw-eof-reading rdr :symbol sb))
-	(if rawMode
-	  (cond 
-	    (nil? ch)
-		(err/throw-eof-reading rdr :symbol sb)
-	    (and (= ch \|) (= (peek-char rdr) '\|))   ;; || in raw mode, eat both
-	    (do (read-char rdr)                       ;; eat the second |
-		    (recur (.Append sb "||") (read-char rdr) (boolean true)))
-	    :else (recur (.Append sb ch) (read-char rdr) (boolean (not= ch \|))))
-	  (if (or (whitespace? ch)
-            (macro-terminating? ch)
-            (nil? ch))
-        (do (when ch
-              (unread rdr ch))
-            (str sb))
-      (recur (.Append sb ch) (read-char rdr) rawMode))))))
+    (loop [sb sb ch startch rawMode rawMode]
+       (when (and rawMode (nil? ch))
+         (err/throw-eof-reading rdr :symbol sb))
+	  (if rawMode
+	    (cond 
+	      (nil? ch)
+		  (err/throw-eof-reading rdr :symbol sb)
+	      (and (= ch \|) (= (peek-char rdr) '\|))   ;; || in raw mode, eat both
+	      (do (read-char rdr)                       ;; eat the second |
+		      (recur (.Append sb "||") (read-char rdr) (boolean true)))
+	      :else (recur (.Append sb ch) (read-char rdr) (boolean (not= ch \|))))
+	    (if (or (whitespace? ch)
+                (macro-terminating? ch)
+                (nil? ch))
+          (do (when ch
+                (unread rdr ch))
+              (str sb))
+          (recur (.Append sb ch) (read-char rdr) rawMode))))))
     
 (defn- ^String read-token
   "Read in a single logical token from the reader"

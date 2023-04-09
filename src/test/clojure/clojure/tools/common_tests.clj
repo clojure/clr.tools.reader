@@ -252,3 +252,18 @@
 (deftest read-namespaced-map'
   (is (= {:foo/bar 1 :baz 2} (read-string "#:foo{:bar 1 :_/baz 2}")))
   (is (= '{foo/bar 1 :baz 2} (read-string "#:foo{bar 1 :_/baz 2}"))))
+  
+  
+;; DM: Added tests to handle |-quoting in symbols.
+(deftest read-symbols-quoted
+
+  (is (= 'abc (read-string "|abc|")))
+  (is (= 'abc (read-string "a|b|c")))
+  (is (= '|abc[]()| (read-string "|abc[]()|")))
+  (is (= '|abc/def| (read-string "|abc/def|")))
+  (is (= 'abc|/|def (read-string "abc|/|def")))
+  (is (= '|abc|/|def| (read-string "|abc|/|def|")))  
+  (is (= '|abc||def| (read-string "|abc||def|")))
+  
+  )
+
