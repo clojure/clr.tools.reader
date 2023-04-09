@@ -72,7 +72,7 @@
 (defn- ^String read-token-symbol
   "Read in a single logical token from the reader"
   [rdr kind initch]
-  (let [rawMode (or false (= initch \|))
+  (let [rawMode (= initch \|)
         sb (StringBuilder.) 
 		startch (if rawMode (read-char rdr) initch)]                     ;; without the (or false ...) we get a recur type error on boolean not matching boolean -- definitely a bug in the recur logic to track down.
     (when rawMode
@@ -87,8 +87,8 @@
 		(err/throw-eof-reading rdr :symbol sb)
 	    (and (= ch \|) (= (peek-char rdr) '\|))   ;; || in raw mode, eat both
 	    (do (read-char rdr)                       ;; eat the second |
-		    (recur (.Append sb "||") (read-char rdr) true))
-	    :else (recur (.Append sb ch) (read-char rdr) (not= ch \|)))
+		    (recur (.Append sb "||") (read-char rdr) (boolean true)))
+	    :else (recur (.Append sb ch) (read-char rdr) (boolean (not= ch \|))))
 	  (if (or (whitespace? ch)
             (macro-terminating? ch)
             (nil? ch))
