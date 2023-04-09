@@ -1,0 +1,2 @@
+{:deps {}                          ;;; TODO: Figure out how we express ClojureCLR version dependency: org.clojure/clojure {:mvn/version "1.10.3"}
+ :paths ["src/main/clojure"]}
