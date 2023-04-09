@@ -93,9 +93,13 @@
           (match-float s float-matcher)
           (let [ratio-matcher (JReMatcher. ratio-pattern s)]                         ;;; .matcher
             (when (.matches ratio-matcher)
-              (match-ratio ratio-matcher))))))))
+              (match-ratio ratio-matcher))))))))      
+		   
+;; Significant hacking on parse-symbol to deal with |-quoting.
 
-(defn parse-symbol
+;; The original parse-symbol can be used when there are no |'s in the token.
+
+(defn- parse-symbol-unquoted
   "Parses a string into a vector of the namespace and symbol"
   [^String token]
   (when-not (or (= "" token)
@@ -116,6 +120,51 @@
         (when (or (= token "/")
                   (== -1 (.IndexOf token "/")))                                        ;;; .indexOf
           [nil token])))))
+
+(defn- decode-quoted-token
+  "Returns a 'masked' version of the token with all quoted characters replaced by 'a' and the raw version with all the |'s removed (handling || properly)"
+  [^String token]
+  (let [sbMasked (StringBuilder.) 
+        sbRaw (StringBuilder.)]
+    (loop [i 0 rawMode false]
+	  (cond 
+	    (>= i (.Length token))
+	    [(str sbMasked) (str sbRaw)]
+		rawMode 
+		(if (= (.get_Chars token i) \|)
+          (if (and (< i (dec (.Length token))) (= (.get_Chars token (inc i)) \|))
+		    (do (.Append sbMasked \a)
+		        (.Append sbRaw \|)
+			    (recur (+ i 2) rawMode))
+		    (recur (+ i 1) false))
+		  (do (.Append sbMasked \a)
+		      (.Append sbRaw (.get_Chars token i))
+			  (recur (+ i 1) rawMode)))
+	    (= (.get_Chars token i) \|)
+		  (recur (+ i 1) true)
+		:else
+		(do (.Append sbMasked (.get_Chars token i))
+		    (.Append sbRaw (.get_Chars token i))
+			(recur (+ i 1) rawMode))))))
+			
+(defn- parse-symbol-quoted
+  [^String token]
+  (let [[masked raw] (decode-quoted-token token)]
+    (let [result (parse-symbol-unquoted masked)]
+	  (when result
+	     (let [[^String ns sym] result] 
+	       (if (nil? ns)
+	         [nil raw]
+		     [(.Substring ^String raw 0 (.Length ns))
+              (.Substring ^String raw (inc (.Length ns)))]))))))
+	 
+		  
+(defn parse-symbol
+  "Parses a string into a vector of the namespace and symbol"
+  [^String token] 
+  (if (.Contains token "|") 
+    (parse-symbol-quoted token)
+	(parse-symbol-unquoted token)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; readers

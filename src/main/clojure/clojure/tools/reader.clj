@@ -49,19 +49,62 @@
     (\" \; \@ \^ \` \~ \( \) \[ \] \{ \} \\) true
     false))
 
+;; DM: Serious hacking on read-token to make it work for |-quoting.
+;;
+;;  The original read-token just below is renamed to read-token-not-symbol.
+;;  Also, moved the initch check to the caller.
+
+(defn- ^String read-token-not-symbol
+  "Read in a single logical token from the reader"
+  [rdr kind initch]
+  (loop [sb (StringBuilder.) ch initch]
+    (if (or (whitespace? ch)
+            (macro-terminating? ch)
+            (nil? ch))
+      (do (when ch
+            (unread rdr ch))
+          (str sb))
+      (recur (.Append sb ch) (read-char rdr)))))                         ;;; .append
+
+		
+;; this version allows for |-escaping		
+
+(defn- ^String read-token-symbol
+  "Read in a single logical token from the reader"
+  [rdr kind initch]
+  (let [rawMode (or false (= initch \|))
+        sb (StringBuilder.) 
+		startch (if rawMode (read-char rdr) initch)]                     ;; without the (or false ...) we get a recur type error on boolean not matching boolean -- definitely a bug in the recur logic to track down.
+    (when rawMode
+	    (.Append sb initch))
+    
+  (loop [sb sb ch startch rawMode rawMode]
+    (when (and rawMode (nil? ch))
+	  (err/throw-eof-reading rdr :symbol sb))
+	(if rawMode
+	  (cond 
+	    (nil? ch)
+		(err/throw-eof-reading rdr :symbol sb)
+	    (and (= ch \|) (= (peek-char rdr) '\|))   ;; || in raw mode, eat both
+	    (do (read-char rdr)                       ;; eat the second |
+		    (recur (.Append sb "||") (read-char rdr) true))
+	    :else (recur (.Append sb ch) (read-char rdr) (not= ch \|)))
+	  (if (or (whitespace? ch)
+            (macro-terminating? ch)
+            (nil? ch))
+        (do (when ch
+              (unread rdr ch))
+            (str sb))
+      (recur (.Append sb ch) (read-char rdr) rawMode))))))
+    
 (defn- ^String read-token
   "Read in a single logical token from the reader"
   [rdr kind initch]
   (if-not initch
     (err/throw-eof-at-start rdr kind)
-    (loop [sb (StringBuilder.) ch initch]
-      (if (or (whitespace? ch)
-              (macro-terminating? ch)
-              (nil? ch))
-        (do (when ch
-              (unread rdr ch))
-            (str sb))
-        (recur (.Append sb ch) (read-char rdr))))))                         ;;; .append
+    (if (= kind :symbol)
+      (read-token-symbol rdr kind initch)
+      (read-token-not-symbol rdr kind initch))))	
 
 (declare read-tagged)
 
