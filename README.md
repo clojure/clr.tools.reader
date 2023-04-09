@@ -10,11 +10,11 @@ From the parent's README:
 
 Nuget reference:
 
-    PM> Install-Package clojure.tools.reader
+    PM> Install-Package clojure.tools.reader -Version 1.3.7
 
 Leiningen/Clojars reference:
 
-   [org.clojure.clr/tools.reader "1.3.6"]
+   [org.clojure.clr/tools.reader "1.3.7"]
 
 
 # Note to maintainers
