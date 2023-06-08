@@ -5,7 +5,7 @@
   </PropertyGroup>
 
 	<PropertyGroup>
-		<PackageId>clr.tools.reader</PackageId>
+		<PackageId>clojure.tools.reader</PackageId>
 		<RootNamespace>clojure.tools</RootNamespace>
 		<Title>clojure.tools.reader</Title>
 		<Product>clojure.tools.reader</Product>
