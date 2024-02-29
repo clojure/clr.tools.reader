@@ -6,20 +6,34 @@ From the parent's README:
 
 > A complete Clojure reader and an EDN-only reader, ...
 
+See the parent repo for documentation.
+
 # Releases
+
+Latest stable release: 1.4.0
+
+[clj](https://clojure.org/guides/getting_started) dependency information:
+```clojure
+io.github.clojure/clr.tools.reader {:git/tag "v1.4.0" :git/sha "21ea35c"}
+```
 
 Nuget reference:
 
-    PM> Install-Package clojure.tools.reader -Version 1.3.7
+> PM> Install-Package clojure.tools.reader -Version 1.4.0
 
-Leiningen/Clojars reference:
-
-   [org.clojure.clr/tools.reader "1.3.7"]
+[Leiningen](https://github.com/technomancy/leiningen) dependency information:
+```clojure
+   [org.clojure.clr/tools.reader "1.4.0"]
+```
 
 
 # Note to maintainers
 
-If using lein-clr to work on this, specifically, to run tests, be aware that the structure of the tests in this project does not conform to the leiningen standard.  There is a file common_tests.clj that is loaded by several other test files  (Speaking to the notion that an include-file should be added for when load is not appropriate, as here).  The leiningen test framework will load common_tests.clj and fail.  You need to run each top-level file directly.  For example,
+If using lein-clr to work on this, specifically, to run tests, be aware that the structure of the tests in this project does not conform to the leiningen standard.  
+There is a file common_tests.clj that is loaded by several other test files  
+(Speaking to the notion that an include-file should be added for when load is not appropriate, as here).  
+The leiningen test framework will load common_tests.clj and fail.  
+You need to run each top-level file directly.  For example,
 
 ```
 lein.bat clr test clojure.tools.metadata-test clojure.tools.reader-test clojure.tools.reader-edn-test
