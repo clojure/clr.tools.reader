@@ -10,20 +10,20 @@ See the parent repo for documentation.
 
 # Releases
 
-Latest stable release: 1.4.0
+Latest stable release: 1.4.1
 
 [clj](https://clojure.org/guides/getting_started) dependency information:
 ```clojure
-io.github.clojure/clr.tools.reader {:git/tag "v1.4.0" :git/sha "21ea35c"}
+io.github.clojure/clr.tools.reader {:git/tag "v1.4.1" :git/sha "47dcfa5"}
 ```
 
 Nuget reference:
 
-> PM> Install-Package clojure.tools.reader -Version 1.4.0
+> PM> Install-Package clojure.tools.reader -Version 1.4.1
 
 [Leiningen](https://github.com/technomancy/leiningen) dependency information:
 ```clojure
-   [org.clojure.clr/tools.reader "1.4.0"]
+   [org.clojure.clr/tools.reader "1.4.1"]
 ```
 
 
