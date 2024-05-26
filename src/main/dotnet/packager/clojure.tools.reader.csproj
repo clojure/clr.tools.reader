@@ -12,12 +12,12 @@
 		<AssemblyTitle>clojure.tools.reader</AssemblyTitle>
 		<Authors>ClojureCLR contributors</Authors>
 		<Description>A Clojure reader and edn-only reader</Description>
-		<Copyright>Copyright © Rich Hickey, ClojureCLR contributors 2023</Copyright>
+		<Copyright>Copyright © Rich Hickey, ClojureCLR contributors 2024</Copyright>
 		<PackageLicenseExpression>EPL-1.0</PackageLicenseExpression>
 		<RepositoryUrl>https://github.com/clojure/clr.tools.namesapce</RepositoryUrl>
 		<Company>ClojureCLR contributors</Company>
 		<PackageTags>Clojure;ClojureCLR</PackageTags>
-		<Version>1.4.1</Version>
+		<Version>1.4.2</Version>
 	</PropertyGroup>
 
 	<ItemGroup>
