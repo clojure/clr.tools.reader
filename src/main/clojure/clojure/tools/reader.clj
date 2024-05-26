@@ -27,6 +27,8 @@
            (System.Text.RegularExpressions Regex)))                                  ;;; java.util.regex.Pattern)
 																					 ;;; (java.util List LinkedList)
 
+(set! *warn-on-reflection* true)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; helpers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1065,10 +1067,12 @@
   ([] (read+string (source-logging-push-back-reader *in*)))
   ([stream] (read+string stream true nil))
   ([^SourceLoggingPushbackReader stream eof-error? eof-value]
-   (let [o (log-source stream (read stream eof-error? eof-value))
+   (let [^StringBuilder buf (doto ^StringBuilder (:buffer @(.source-log-frames stream)) (.set_Length 0))                                                 ;;; .setLength
+         o (log-source stream (read stream eof-error? eof-value))
          s (.Trim (str (:buffer @(.source-log-frames stream))))]                          ;;; .trim
      [o s]))
   ([opts ^SourceLoggingPushbackReader stream]
-   (let [o (log-source stream (read opts stream))
+   (let [^StringBuilder buf (doto ^StringBuilder (:buffer @(.source-log-frames stream)) (.set_Length 0))                                                 ;;; .setLength
+         o (log-source stream (read opts stream))
          s (.Trim (str (:buffer @(.source-log-frames stream))))]                          ;;; .trim                                                      ;;; .trim
      [o s])))
