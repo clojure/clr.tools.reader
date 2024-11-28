@@ -14,7 +14,7 @@ Latest stable release: 1.5.0
 
 [clj](https://clojure.org/guides/getting_started) dependency information:
 ```clojure
-io.github.clojure/clr.tools.reader {:git/tag "v1.5.0" :git/sha "c1186e3"}
+io.github.clojure/clr.tools.reader {:git/tag "v1.5.0" :git/sha "46ce896"}
 ```
 
 Nuget reference:
