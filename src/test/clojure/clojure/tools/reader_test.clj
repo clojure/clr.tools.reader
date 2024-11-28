@@ -200,3 +200,38 @@
                           ["[a\rb]" "[a\r b]" "[a \rb]"])]
     (doseq [pairs (partition 2 1 read-vals)]
       (is (= (first pairs) (second pairs))))))
+	  
+(deftest read-symbol
+  (is (= 'foo (read-string "foo")))
+  (is (= 'foo/bar (read-string "foo/bar")))
+  (is (= '*+!-_? (read-string "*+!-_?")))
+  (is (= 'abc:def:ghi (read-string "abc:def:ghi")))
+  (is (= 'abc.def/ghi (read-string "abc.def/ghi")))
+  (is (= 'abc/def.ghi (read-string "abc/def.ghi")))
+  (is (= 'abc:def/ghi:jkl.mno (read-string "abc:def/ghi:jkl.mno")))
+  (is (instance? clojure.lang.Symbol (read-string "alphabet")))
+  (is (= "foo//" (str (read-string "foo//"))))
+  (is (Double/IsNaN ^double (read-string "##NaN")))                  ;;; java.lang.Double/isNaN 
+  (is (Double/IsInfinity ^double (read-string "##Inf")))             ;;; java.lang.Double/isInfinite
+  (is (Double/IsInfinity ^double (read-string "##-Inf")))            ;;; java.lang.Double/isInfinite
+  (testing "Correct array class symbols"
+    (doseq [n (range 1 10)
+            :let [sym (str "String/" n)
+                  qsym (str "System.String/" n)]]                    ;;; "java.lang.String/"
+      (let [rsym (read-string sym)
+            rqsym (read-string qsym)]
+        (is (= ((juxt namespace name) rsym)
+               ["String" (str n)]))
+        (is (= ((juxt namespace name) rqsym)
+               ["System.String" (str n)])))))                        ;;; "java.lang.String"
+  (testing "Correct prim array symbols"
+    (doseq [prim ["int" "long" "boolean" "byte" "char" "double" "float" "short"]]
+      (doseq [n (range 1 10)
+              :let [sym (str prim "/" n)]]
+        (let [rsym (read-string sym)]
+          (is (= ((juxt namespace name) rsym)
+                 [prim (str n)]))))))
+  (testing "Incorrect Array class symbols"
+    (doseq [suffix ["" "0" "11" "1a"]
+            :let [sym (str "String/" suffix)]]
+      (is (thrown? clojure.lang.ExceptionInfo (read-string sym)) sym))))	  

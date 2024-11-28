@@ -110,12 +110,15 @@
                                (subs token 0 ns-idx))]
         (let [ns-idx (inc ns-idx)]
           (when-not (== ns-idx (count token))
-            (let [sym (subs token ns-idx)]
-              (when (and (not (numeric? (nth sym 0)))
-                         (not (= "" sym))
-                         (not (.EndsWith ns ":"))                                      ;;; .endsWith 
-                         (or (= sym "/")
-                             (== -1 (.IndexOf sym "/"))))                              ;;; .indexOf
+		    (let [sym (subs token ns-idx)]
+              (cond
+                (re-matches #"[1-9]" sym)
+                [ns sym]
+                (and (not (numeric? (nth sym 0)))
+                     (not (= "" sym))
+                     (not (.EndsWith ns ":"))                                         ;;; .endsWith 
+                     (or (= sym "/")
+                         (== -1 (.IndexOf sym "/"))))                                 ;;; .indexOf
                 [ns sym]))))
         (when (or (= token "/")
                   (== -1 (.IndexOf token "/")))                                        ;;; .indexOf
