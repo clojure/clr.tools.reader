@@ -309,7 +309,7 @@
          ch (read-char rdr)]
     (if (or (whitespace? ch) (macros ch) (nil? ch))
       (let [s (str sb)]
-        (unread rdr ch)
+        (when ch (unread rdr ch))
         (or (match-number s)
             (err/throw-invalid-number rdr s)))
       (recur (doto sb (.Append ch)) (read-char rdr)))))                             ;;; .append
