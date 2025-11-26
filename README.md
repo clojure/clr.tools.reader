@@ -10,16 +10,16 @@ See the parent repo for documentation.
 
 # Releases
 
-Latest stable release: 1.5.0
+Latest stable release: 1.5.2
 
 [clj](https://clojure.org/guides/getting_started) dependency information:
 ```clojure
-io.github.clojure/clr.tools.reader {:git/tag "v1.5.0" :git/sha "46ce896"}
+io.github.clojure/clr.tools.reader {:git/tag "v1.5.2" :git/sha "1a7a8e9"}
 ```
 
 Nuget reference:
 
-> PM> Install-Package clojure.tools.reader -Version 1.5.0
+> PM> Install-Package clojure.tools.reader -Version 1.5.2
 
 [Leiningen](https://github.com/technomancy/leiningen) dependency information:
 ```clojure
